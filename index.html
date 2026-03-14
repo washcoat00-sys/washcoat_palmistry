@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Palm Reader - 스마트 손금 분석</title>
+    <title>Palm Reader - 손금 분석의 새로운 경험</title>
     <link rel="stylesheet" href="style.css">
     <!-- MediaPipe Hands for auto-detection and landmarking -->
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
@@ -12,27 +12,37 @@
 </head>
 <body>
     <header>
-        <h1>AI Palm Reader</h1>
+        <h1>Palm Reader</h1>
         <button id="themeToggle" aria-label="Toggle dark mode">🌙</button>
     </header>
     <main>
         <section class="intro">
-            <p><strong>스마트 AI가 당신의 손금을 자동으로 찾아 드립니다.</strong><br>양손 사진을 함께 올리면 자동으로 좌우를 구별하고 주요 선들을 분석합니다.</p>
+            <p><strong>스마트 AI가 당신의 손바닥 위 운명을 읽어드립니다.</strong><br>양손 사진을 올리면 자동으로 선을 분석하고 긍정적인 운세의 흐름을 짚어드립니다.</p>
         </section>
 
-        <section class="user-info">
-            <div class="input-group">
-                <label>성별</label>
-                <div class="gender-selection">
-                    <input type="radio" id="male" name="gender" value="male" checked>
-                    <label for="male">남성</label>
-                    <input type="radio" id="female" name="gender" value="female">
-                    <label for="female">여성</label>
+        <section class="user-info-v2">
+            <div class="info-card">
+                <div class="input-group">
+                    <label>성별</label>
+                    <div class="gender-btn-group">
+                        <label class="gender-btn">
+                            <input type="radio" name="gender" value="male" checked>
+                            <span>남성</span>
+                        </label>
+                        <label class="gender-btn">
+                            <input type="radio" name="gender" value="female">
+                            <span>여성</span>
+                        </label>
+                    </div>
                 </div>
-            </div>
-            <div class="input-group">
-                <label for="age">만 나이</label>
-                <input type="number" id="age" min="1" max="120" value="25">
+                <div class="divider"></div>
+                <div class="input-group">
+                    <label for="age">만 나이</label>
+                    <div class="age-input-wrapper">
+                        <input type="number" id="age" min="1" max="120" value="25">
+                        <span class="unit">세</span>
+                    </div>
+                </div>
             </div>
         </section>
 
