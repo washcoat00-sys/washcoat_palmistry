@@ -206,6 +206,27 @@ main {
     color: white;
 }
 
+.reset-btn {
+    margin-top: 1.5rem;
+    padding: 0.6rem 1.2rem;
+    background: #e74c3c;
+    color: white;
+    border-radius: 8px;
+    border: none;
+    font-weight: bold;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.reset-btn:hover {
+    background: #c0392b;
+    transform: translateY(-1px);
+}
+
 .custom-file-upload:hover { background: var(--accent-hover); }
 .camera-btn:hover { background: #34495e; }
 
