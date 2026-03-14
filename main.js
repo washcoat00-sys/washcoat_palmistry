@@ -1,4 +1,3 @@
-
 document.addEventListener('DOMContentLoaded', () => {
     // UI Elements
     const elements = {
@@ -23,6 +22,46 @@ document.addEventListener('DOMContentLoaded', () => {
     let processedHands = { left: null, right: null };
     let stream = null;
 
+    // --- MediaPipe Hands Setup ---
+    let hands;
+    try {
+        hands = new Hands({
+            locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+        });
+
+        hands.setOptions({
+            maxNumHands: 1,
+            modelComplexity: 1,
+            minDetectionConfidence: 0.5,
+            minTrackingConfidence: 0.5
+        });
+
+        // Set up global callback once
+        hands.onResults((results) => {
+            if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+                const landmarks = results.multiHandLandmarks[0];
+                const label = results.multiHandedness[0].label;
+                // MediaPipe "Left" label -> physical Right.
+                const handedness = label === 'Left' ? 'right' : 'left';
+                
+                // Store image reference globally temporarily to be picked up by the resolver
+                if (window._pendingImg) {
+                    processedHands[handedness] = {
+                        img: window._pendingImg,
+                        landmarks: landmarks
+                    };
+                    delete window._pendingImg;
+                }
+            }
+            if (window._processResolver) {
+                window._processResolver();
+                delete window._processResolver;
+            }
+        });
+    } catch (e) {
+        console.error("MediaPipe Hands failed to initialize:", e);
+    }
+
     // --- Theme Management ---
     const currentTheme = localStorage.getItem('theme') || 'light';
     if (currentTheme === 'dark') {
@@ -43,8 +82,8 @@ document.addEventListener('DOMContentLoaded', () => {
             processedHands = { left: null, right: null };
             clearCanvas(elements.canvasLeft);
             clearCanvas(elements.canvasRight);
-            elements.previewLeft.textContent = "분석 중...";
-            elements.previewRight.textContent = "분석 중...";
+            elements.previewLeft.textContent = "대기 중...";
+            elements.previewRight.textContent = "대기 중...";
             elements.resultDiv.innerHTML = "";
             elements.palmImages.value = "";
             updateAnalysisUI();
@@ -72,7 +111,9 @@ document.addEventListener('DOMContentLoaded', () => {
         elements.cameraModal.style.display = 'none';
     };
 
-    elements.closeModal.addEventListener('click', stopCamera);
+    if (elements.closeModal) {
+        elements.closeModal.addEventListener('click', stopCamera);
+    }
     window.addEventListener('click', (e) => { if (e.target === elements.cameraModal) stopCamera(); });
 
     elements.captureBtn.addEventListener('click', () => {
@@ -84,7 +125,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         canvas.toBlob(async (blob) => {
             const file = new File([blob], `capture_${Date.now()}.png`, { type: 'image/png' });
-            elements.analyzeBtn.textContent = "AI가 인식 중...";
+            elements.analyzeBtn.textContent = "AI 분석 중...";
             await processImage(file);
             updateAnalysisUI();
             stopCamera();
@@ -99,12 +140,10 @@ document.addEventListener('DOMContentLoaded', () => {
         elements.analyzeBtn.disabled = true;
         elements.analyzeBtn.textContent = "AI 분석 중...";
         
-        // Process all selected files (can be 1 or 2)
         for (const file of files) {
             await processImage(file);
         }
         updateAnalysisUI();
-        // Reset file input value to allow re-uploading same file if needed
         elements.palmImages.value = "";
     });
 
@@ -136,21 +175,14 @@ document.addEventListener('DOMContentLoaded', () => {
             reader.onload = async (e) => {
                 const img = new Image();
                 img.onload = async () => {
-                    hands.onResults((results) => {
-                        if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
-                            const landmarks = results.multiHandLandmarks[0];
-                            const label = results.multiHandedness[0].label;
-                            // FIXED: Swapped handedness logic. MediaPipe "Left" label -> physical Right.
-                            const handedness = label === 'Left' ? 'right' : 'left';
-                            
-                            processedHands[handedness] = {
-                                img: img,
-                                landmarks: landmarks
-                            };
-                        }
+                    window._pendingImg = img;
+                    window._processResolver = resolve;
+                    try {
+                        await hands.send({ image: img });
+                    } catch (error) {
+                        console.error("Hands.send failed:", error);
                         resolve();
-                    });
-                    await hands.send({ image: img });
+                    }
                 };
                 img.src = e.target.result;
             };
@@ -192,15 +224,19 @@ document.addEventListener('DOMContentLoaded', () => {
         canvas.height = img.height;
         ctx.drawImage(img, 0, 0);
 
-        if (window.drawConnectors && window.drawLandmarks) {
-            drawConnectors(ctx, landmarks, HAND_CONNECTIONS, {color: '#ffffff', lineWidth: 2});
-            drawLandmarks(ctx, landmarks, {color: '#ffffff', lineWidth: 1, radius: 3});
+        // Safely access MediaPipe Drawing Utils
+        const mpDrawing = window;
+        const mpHands = window;
+
+        if (mpDrawing.drawConnectors && mpDrawing.drawLandmarks && mpHands.HAND_CONNECTIONS) {
+            mpDrawing.drawConnectors(ctx, landmarks, mpHands.HAND_CONNECTIONS, {color: '#ffffff', lineWidth: 2});
+            mpDrawing.drawLandmarks(ctx, landmarks, {color: '#ffffff', lineWidth: 1, radius: 3});
         }
 
         const drawPalmLine = (points, color, label) => {
             ctx.beginPath();
             ctx.strokeStyle = color;
-            ctx.lineWidth = 8; // Refined for even better visibility balance
+            ctx.lineWidth = 8;
             ctx.lineCap = 'round';
             ctx.lineJoin = 'round';
             ctx.shadowBlur = 6;
@@ -213,32 +249,30 @@ document.addEventListener('DOMContentLoaded', () => {
             ctx.stroke();
             ctx.shadowBlur = 0;
 
-            // Compact Label for precise view
             const text = label;
-            ctx.font = "bold 20px Pretendard"; // User requested size
+            ctx.font = "bold 20px Pretendard";
             const textWidth = ctx.measureText(text).width;
             const x = points[0].x * canvas.width;
             const y = points[0].y * canvas.height - 15;
             
-            // Text Background with compact padding
             ctx.fillStyle = color;
             ctx.fillRect(x - 5, y - 20, textWidth + 10, 28);
             
-            // White text for high contrast
             ctx.fillStyle = "#ffffff";
             ctx.fillText(text, x, y);
 
-            // Subtle border for the label box
             ctx.strokeStyle = "#ffffff";
             ctx.lineWidth = 1;
             ctx.strokeRect(x - 5, y - 20, textWidth + 10, 28);
         };
 
-        drawPalmLine([landmarks[5], landmarks[2], landmarks[1], landmarks[0]], '#ff4757', '생명선');
-        drawPalmLine([landmarks[5], landmarks[9], landmarks[13], landmarks[17]], '#2ed573', '두뇌선');
-        const heartPoints = [landmarks[17], landmarks[13], landmarks[9], landmarks[5]].map(p => ({x: p.x, y: p.y * 0.96}));
-        drawPalmLine(heartPoints, '#ffa502', '감정선');
-        drawPalmLine([landmarks[0], landmarks[9], landmarks[12]], '#1e90ff', '운명선');
+        if (landmarks) {
+            drawPalmLine([landmarks[5], landmarks[2], landmarks[1], landmarks[0]], '#ff4757', '생명선');
+            drawPalmLine([landmarks[5], landmarks[9], landmarks[13], landmarks[17]], '#2ed573', '두뇌선');
+            const heartPoints = [landmarks[17], landmarks[13], landmarks[9], landmarks[5]].map(p => ({x: p.x, y: p.y * 0.96}));
+            drawPalmLine(heartPoints, '#ffa502', '감정선');
+            drawPalmLine([landmarks[0], landmarks[9], landmarks[12]], '#1e90ff', '운명선');
+        }
     }
 
     const palmReadings = {
