@@ -194,11 +194,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const drawPalmLine = (points, color, label) => {
             ctx.beginPath();
             ctx.strokeStyle = color;
-            ctx.lineWidth = 20;
+            ctx.lineWidth = 28; // Increased significantly
             ctx.lineCap = 'round';
             ctx.lineJoin = 'round';
-            ctx.shadowBlur = 12;
-            ctx.shadowColor = color;
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = 'rgba(0,0,0,0.5)';
             
             ctx.moveTo(points[0].x * canvas.width, points[0].y * canvas.height);
             for (let i = 1; i < points.length; i++) {
@@ -207,17 +207,25 @@ document.addEventListener('DOMContentLoaded', () => {
             ctx.stroke();
             ctx.shadowBlur = 0;
 
+            // Highly Visible Label
             const text = label;
-            ctx.font = "bold 50px Pretendard";
+            ctx.font = "bold 65px Pretendard"; // Much larger font
             const textWidth = ctx.measureText(text).width;
             const x = points[0].x * canvas.width;
-            const y = points[0].y * canvas.height - 25;
+            const y = points[0].y * canvas.height - 40;
             
+            // Text Background with higher contrast
             ctx.fillStyle = color;
-            ctx.fillRect(x - 10, y - 45, textWidth + 20, 60);
+            ctx.fillRect(x - 15, y - 60, textWidth + 30, 80);
             
+            // White text for maximum contrast
             ctx.fillStyle = "#ffffff";
             ctx.fillText(text, x, y);
+
+            // Add a small border to the label box
+            ctx.strokeStyle = "#ffffff";
+            ctx.lineWidth = 3;
+            ctx.strokeRect(x - 15, y - 60, textWidth + 30, 80);
         };
 
         drawPalmLine([landmarks[5], landmarks[2], landmarks[1], landmarks[0]], '#ff4757', '생명선');
