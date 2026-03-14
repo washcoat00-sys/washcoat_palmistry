@@ -96,10 +96,13 @@ document.addEventListener('DOMContentLoaded', () => {
         elements.analyzeBtn.disabled = true;
         elements.analyzeBtn.textContent = "AI 분석 중...";
         
-        for (const file of files.slice(0, 2)) {
+        // Process all selected files (can be 1 or 2)
+        for (const file of files) {
             await processImage(file);
         }
         updateAnalysisUI();
+        // Reset file input value to allow re-uploading same file if needed
+        elements.palmImages.value = "";
     });
 
     elements.dropZone.addEventListener('dragover', (e) => {
@@ -116,7 +119,7 @@ document.addEventListener('DOMContentLoaded', () => {
         elements.analyzeBtn.disabled = true;
         elements.analyzeBtn.textContent = "AI 분석 중...";
         
-        for (const file of files.slice(0, 2)) {
+        for (const file of files) {
             await processImage(file);
         }
         updateAnalysisUI();
