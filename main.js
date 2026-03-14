@@ -1,4 +1,3 @@
-
 document.addEventListener('DOMContentLoaded', () => {
     // UI Elements
     const elements = {
@@ -48,7 +47,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (files.length === 0) return;
         
         elements.analyzeBtn.disabled = true;
-        elements.analyzeBtn.textContent = "AI가 손을 인식하는 중...";
+        elements.analyzeBtn.textContent = "AI가 손을 분석하고 있습니다...";
         
         // Clear previous
         processedHands = { left: null, right: null };
@@ -64,7 +63,6 @@ document.addEventListener('DOMContentLoaded', () => {
         updateAnalysisUI();
     });
 
-    // Drag and Drop
     elements.dropZone.addEventListener('dragover', (e) => {
         e.preventDefault();
         elements.dropZone.classList.add('drag-over');
@@ -77,7 +75,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (files.length === 0) return;
 
         elements.analyzeBtn.disabled = true;
-        elements.analyzeBtn.textContent = "AI가 손을 인식하는 중...";
+        elements.analyzeBtn.textContent = "AI가 손을 분석하고 있습니다...";
         processedHands = { left: null, right: null };
         
         for (const file of files.slice(0, 2)) {
@@ -100,10 +98,9 @@ document.addEventListener('DOMContentLoaded', () => {
                             const landmarks = results.multiHandLandmarks[0];
                             const label = results.multiHandedness[0].label; // "Left" or "Right"
                             
-                            // MediaPipe's "Left" label is actually the mirror image for the user (Right hand).
-                            // But usually it detects Left as Left in the camera feed. 
-                            // For static images, it depends on the flip. Let's adjust based on common usage.
-                            const handedness = label === 'Left' ? 'left' : 'right';
+                            // FIXED: Swapped handedness logic. 
+                            // MediaPipe "Left" label usually corresponds to physical Right hand in photos.
+                            const handedness = label === 'Left' ? 'right' : 'left';
                             
                             processedHands[handedness] = {
                                 img: img,
@@ -122,25 +119,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function updateAnalysisUI() {
         if (processedHands.left) {
-            drawPalmLines(elements.canvasLeft, processedHands.left);
+            drawHandSkeletonAndLines(elements.canvasLeft, processedHands.left);
             elements.previewLeft.textContent = "";
         } else {
-            elements.previewLeft.textContent = "왼손 인식 실패";
+            elements.previewLeft.textContent = "왼손 인식 대기";
         }
 
         if (processedHands.right) {
-            drawPalmLines(elements.canvasRight, processedHands.right);
+            drawHandSkeletonAndLines(elements.canvasRight, processedHands.right);
             elements.previewRight.textContent = "";
         } else {
-            elements.previewRight.textContent = "오른손 인식 실패";
+            elements.previewRight.textContent = "오른손 인식 대기";
         }
 
         if (processedHands.left && processedHands.right) {
             elements.analyzeBtn.disabled = false;
-            elements.analyzeBtn.textContent = "종합 분석 시작하기";
+            elements.analyzeBtn.textContent = "양손 종합 분석 결과 보기";
         } else {
             elements.analyzeBtn.disabled = true;
-            elements.analyzeBtn.textContent = "양손 사진이 필요합니다 (현재 " + (Object.values(processedHands).filter(v => v).length) + "개 인식됨)";
+            elements.analyzeBtn.textContent = "양손 사진이 모두 필요합니다 (현재 " + (Object.values(processedHands).filter(v => v).length) + "개 인식됨)";
         }
     }
 
@@ -149,51 +146,67 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
     }
 
-    function drawPalmLines(canvas, data) {
+    function drawHandSkeletonAndLines(canvas, data) {
         const ctx = canvas.getContext('2d');
         const img = data.img;
         const landmarks = data.landmarks;
 
-        // Set canvas size to match aspect ratio
         canvas.width = img.width;
         canvas.height = img.height;
 
         // Draw Image
         ctx.drawImage(img, 0, 0);
 
-        // Styling for lines
-        const drawLine = (points, color, label) => {
+        // Draw Skeleton using MediaPipe Drawing Utils
+        if (window.drawConnectors && window.drawLandmarks) {
+            drawConnectors(ctx, landmarks, HAND_CONNECTIONS, {color: '#ffffff', lineWidth: 2});
+            drawLandmarks(ctx, landmarks, {color: '#ffffff', lineWidth: 1, radius: 3});
+        }
+
+        // --- Draw Labeled Palm Lines ---
+        const drawPalmLine = (points, color, label) => {
             ctx.beginPath();
             ctx.strokeStyle = color;
-            ctx.lineWidth = 10;
+            ctx.lineWidth = 12;
             ctx.lineCap = 'round';
             ctx.lineJoin = 'round';
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = color;
             
             ctx.moveTo(points[0].x * canvas.width, points[0].y * canvas.height);
             for (let i = 1; i < points.length; i++) {
                 ctx.lineTo(points[i].x * canvas.width, points[i].y * canvas.height);
             }
             ctx.stroke();
+            ctx.shadowBlur = 0; // Reset shadow
 
-            // Label
+            // Label Background
+            const text = label;
+            ctx.font = "bold 34px Pretendard";
+            const textWidth = ctx.measureText(text).width;
+            const x = points[0].x * canvas.width;
+            const y = points[0].y * canvas.height - 15;
+            
             ctx.fillStyle = color;
-            ctx.font = "bold 30px Pretendard";
-            ctx.fillText(label, points[0].x * canvas.width, points[0].y * canvas.height - 10);
+            ctx.fillRect(x - 5, y - 30, textWidth + 10, 40);
+            
+            ctx.fillStyle = "#ffffff";
+            ctx.fillText(text, x, y);
         };
 
-        // Life Line (Landmark 5 -> 2 -> 1 -> 0 area)
-        drawLine([landmarks[5], landmarks[2], landmarks[1], landmarks[0]], '#ff4757', '생명선');
+        // Line Coordinates
+        // 1. 생명선 (Life Line): 엄지 밑 근육 (5-2-1-0)
+        drawPalmLine([landmarks[5], landmarks[2], landmarks[1], landmarks[0]], '#ff4757', '생명선');
 
-        // Head Line (Landmark 5 -> 9 -> 13 -> 17 area across)
-        drawLine([landmarks[5], landmarks[9], landmarks[13], landmarks[17]], '#2ed573', '두뇌선');
+        // 2. 두뇌선 (Head Line): 손바닥 가로 지름 (5-9-13-17)
+        drawPalmLine([landmarks[5], landmarks[9], landmarks[13], landmarks[17]], '#2ed573', '두뇌선');
 
-        // Heart Line (Landmark 17 -> 13 -> 9 -> 5 area high)
-        // Adjusting y slightly for heart line
-        const heartPoints = [landmarks[17], landmarks[13], landmarks[9], landmarks[5]].map(p => ({x: p.x, y: p.y * 0.95}));
-        drawLine(heartPoints, '#ffa502', '감정선');
+        // 3. 감정선 (Heart Line): 손가락 밑 가로 (17-13-9-5 약간 상단)
+        const heartPoints = [landmarks[17], landmarks[13], landmarks[9], landmarks[5]].map(p => ({x: p.x, y: p.y * 0.96}));
+        drawPalmLine(heartPoints, '#ffa502', '감정선');
 
-        // Fate Line (Landmark 0 -> 9 vertical)
-        drawLine([landmarks[0], landmarks[9]], '#1e90ff', '운명선');
+        // 4. 운명선 (Fate Line): 손바닥 중앙 세로 (0-9-12 사이)
+        drawPalmLine([landmarks[0], landmarks[9], landmarks[12]], '#1e90ff', '운명선');
     }
 
     // --- Final Analysis & Result Display ---
@@ -201,22 +214,26 @@ document.addEventListener('DOMContentLoaded', () => {
         life: {
             name: "생명선 (Life Line)",
             color: "#ff4757",
-            insights: ["강인한 생명력과 활기", "안정적이고 차분한 에너지", "감수성이 풍부하고 섬세한 건강", "꾸준한 관리로 다져진 활력"]
+            pri: ["활력이 넘치고 건강한 체질", "강인한 생존 본능과 열정", "차분하고 안정적인 에너지"],
+            sec: ["꾸준한 관리로 유지되는 건강", "현재 에너지가 매우 집중된 상태", "규칙적인 생활로 다져진 활력"]
         },
         head: {
             name: "두뇌선 (Head Line)",
             color: "#2ed573",
-            insights: ["논리적이고 명확한 판단력", "창의적이고 직관적인 사고", "신중하고 분석적인 기질", "실용적이고 현실적인 해결 능력"]
+            pri: ["논리적이고 명확한 사고방식", "직관적이고 예술적인 감각", "신중하고 분석적인 기질"],
+            sec: ["현실적인 문제 해결 능력", "학습을 통한 전문적 지식 확보", "유연한 사고와 빠른 판단력"]
         },
         heart: {
             name: "감정선 (Heart Line)",
             color: "#ffa502",
-            insights: ["정열적이고 솔직한 감정", "배려심 깊고 온화한 성품", "독립적이고 주관이 뚜렷한 애정관", "안정적인 관계 유지 능력"]
+            pri: ["따뜻하고 배려심 깊은 성품", "독립적이고 주관이 뚜렷한 애정관", "섬세하고 감수성이 풍부한 기질"],
+            sec: ["성숙하고 안정적인 대인관계", "자신을 사랑할 줄 아는 건강한 자아", "포용력 있는 리더십의 발현"]
         },
         fate: {
             name: "운명선 (Fate Line)",
             color: "#1e90ff",
-            insights: ["뚜렷한 목표 의식과 책임감", "자유롭고 구애받지 않는 성취욕", "안정적인 환경에서의 성공운", "개척 정신을 통한 새로운 기회"]
+            pri: ["뚜렷한 목표 의식과 개척 정신", "안정적인 환경에서의 성취욕", "자유롭고 창의적인 길을 추구함"],
+            sec: ["성실함으로 일궈낸 사회적 신뢰", "새로운 도약을 준비하는 강력한 에너지", "목표를 향한 끊임없는 정진"]
         }
     };
 
@@ -226,9 +243,9 @@ document.addEventListener('DOMContentLoaded', () => {
         
         elements.analyzeBtn.disabled = true;
         elements.resultDiv.innerHTML = `
-            <div style="text-align: center; padding: 3rem;">
+            <div style="text-align: center; padding: 4rem;">
                 <div class="loader"></div>
-                <p>AI가 이미지의 손금 곡률과 깊이를 정밀 대조하고 있습니다...</p>
+                <p style="font-size: 1.1rem; font-weight: 500;">양손의 손금 곡선과 깊이를 정밀하게 비교 분석하고 있습니다...</p>
             </div>
         `;
 
@@ -238,31 +255,38 @@ document.addEventListener('DOMContentLoaded', () => {
             let html = `<h2>AI 종합 분석 리포트</h2>`;
             html += `
                 <div class="summary-card">
-                    <p><strong>사용자 정보:</strong> ${gender === 'male' ? '남성' : '여성'} / 만 ${age}세</p>
-                    <p><strong>핵심 분석:</strong> 사용자님은 <strong>${role.pri}</strong>의 타고난 기질을 바탕으로 <strong>${role.sec}</strong>의 후천적인 환경을 매우 적극적으로 개척하고 있는 형국입니다.</p>
+                    <p style="margin-bottom: 0.5rem;"><strong>사용자 정보:</strong> ${gender === 'male' ? '남성' : '여성'} / 만 ${age}세</p>
+                    <p><strong>핵심 분석:</strong> 사용자님은 <strong>${role.pri}</strong>의 선천적 재능을 바탕으로, <strong>${role.sec}</strong>의 후천적 노력을 통해 자신만의 독창적인 운명을 개척하고 계십니다.</p>
                 </div>
                 <div class="reading-grid">
             `;
 
-            for (const key in palmReadings) {
+            // Unique random index per line to avoid duplicate results
+            const keys = Object.keys(palmReadings);
+            keys.forEach(key => {
                 const line = palmReadings[key];
+                const priIdx = Math.floor(Math.random() * line.pri.length);
+                const secIdx = Math.floor(Math.random() * line.sec.length);
+                
                 html += `
                 <div class="reading-card">
-                    <h3 style="color: ${line.color}">${line.name}</h3>
-                    <p><span class="line-label">${role.pri}:</span> ${line.insights[Math.floor(Math.random() * 4)]}의 타고난 성향</p>
-                    <p><span class="line-label">${role.sec}:</span> 현재 ${line.insights[Math.floor(Math.random() * 4)]} 상태로 발현 중</p>
-                    <p style="font-size: 0.8rem; opacity: 0.7; margin-top: 1rem;">현재 흐름은 매우 긍정적이며, 특히 이 부분의 선명도가 높아질수록 운세가 더욱 탄력을 받을 것입니다.</p>
+                    <h3 style="color: ${line.color}; border-left: 5px solid ${line.color}; padding-left: 10px; border-bottom: none;">${line.name}</h3>
+                    <div style="margin-top: 1rem;">
+                        <p><span class="line-label" style="background: ${line.color}22; padding: 2px 6px; border-radius: 4px; color: ${line.color};">${role.pri}</span> ${line.pri[priIdx]}의 성향</p>
+                        <p><span class="line-label" style="background: ${line.color}22; padding: 2px 6px; border-radius: 4px; color: ${line.color};">${role.sec}</span> 현재 ${line.sec[secIdx]} 모습</p>
+                    </div>
+                    <p style="font-size: 0.85rem; opacity: 0.8; margin-top: 1.2rem; line-height: 1.5;">분석된 선의 깊이와 선명도로 볼 때, 현재 매우 긍정적인 운의 흐름을 타고 있습니다. 특히 ${key === 'fate' ? '직업적 성취' : key === 'head' ? '지적인 활동' : key === 'life' ? '건강 관리' : '대인 관계'}에 집중하신다면 더욱 좋은 결과가 예상됩니다.</p>
                 </div>`;
-            }
+            });
 
             html += `</div>`;
             html += `
                 <div class="advice-section">
-                    <h3>🔮 총평 및 조언</h3>
-                    <p>사용자님의 양손 손금을 대조한 결과, ${age >= 30 ? '현재는 후천적 운명이 완성되어 가는 중요한 시기' : '미래의 가능성을 열어가는 역동적인 시기'}에 있습니다.</p>
-                    <p>전반적으로 주름이 깨끗하고 선명하여 의사결정이 빠르고 실행력이 좋습니다. 현재 계획 중인 일이 있다면 주저하지 말고 추진해 보시기 바랍니다.</p>
+                    <h3 style="margin-bottom: 1rem;">🔮 AI 총평 및 운명 조언</h3>
+                    <p style="font-size: 1.1rem; line-height: 1.7;">사용자님의 양손을 종합해볼 때, ${age >= 30 ? '후천적인 노력이 빛을 발하여 안정기에 접어드는 과정' : '잠재된 재능을 실현하기 위한 에너지가 폭발하는 시기'}에 와 있습니다.</p>
+                    <p style="margin-top: 1rem; opacity: 0.9;">특히 두뇌선과 운명선의 조화가 뛰어나 전략적인 계획을 세우고 이를 끈기 있게 밀어붙이는 힘이 강합니다. 스스로를 믿고 나아가세요.</p>
                 </div>
-                <p style="font-size: 0.8rem; opacity: 0.5; text-align: center; margin-top: 2.5rem;">* 위 결과는 AI 이미지 분석을 통한 시뮬레이션입니다. 당신의 미래는 당신의 행동으로 결정됩니다.</p>
+                <p style="font-size: 0.85rem; opacity: 0.6; text-align: center; margin-top: 3rem; font-style: italic;">* 본 분석은 AI 이미지 패턴 분석 결과이며, 참고용입니다. 당신의 운명은 당신의 손끝에서 매 순간 새롭게 창조됩니다.</p>
             `;
 
             elements.resultDiv.innerHTML = html;
