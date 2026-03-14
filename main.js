@@ -1,9 +1,13 @@
+
 document.addEventListener('DOMContentLoaded', () => {
     const analyzeBtn = document.getElementById('analyzeBtn');
     const palmImage = document.getElementById('palmImage');
     const imagePreviewContainer = document.getElementById('imagePreviewContainer');
     const resultDiv = document.getElementById('result');
     const themeToggle = document.getElementById('themeToggle');
+    const dropZone = document.getElementById('dropZone');
+
+    let selectedFile = null;
 
     // Theme Management
     const currentTheme = localStorage.getItem('theme') || 'light';
@@ -19,16 +23,44 @@ document.addEventListener('DOMContentLoaded', () => {
         themeToggle.textContent = theme === 'dark' ? '☀️' : '🌙';
     });
 
-    // Image Preview logic
-    palmImage.addEventListener('change', function() {
-        const file = this.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                imagePreviewContainer.innerHTML = `<img src="${e.target.result}" alt="Palm Preview">`;
-            }
-            reader.readAsDataURL(file);
+    // Helper: Display Preview
+    function displayPreview(file) {
+        if (!file || !file.type.startsWith('image/')) return;
+        selectedFile = file;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            imagePreviewContainer.innerHTML = `<img src="${e.target.result}" alt="Palm Preview">`;
         }
+        reader.readAsDataURL(file);
+    }
+
+    // Input Change
+    palmImage.addEventListener('change', function() {
+        displayPreview(this.files[0]);
+    });
+
+    // Drag and Drop Logic
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, preventDefaults, false);
+    });
+
+    function preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+
+    ['dragenter', 'dragover'].forEach(eventName => {
+        dropZone.addEventListener(eventName, () => dropZone.classList.add('drag-over'), false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, () => dropZone.classList.remove('drag-over'), false);
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+        const dt = e.dataTransfer;
+        const file = dt.files[0];
+        displayPreview(file);
     });
 
     const palmReadings = {
@@ -40,11 +72,11 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     analyzeBtn.addEventListener('click', () => {
-        if (palmImage.files.length > 0) {
+        if (selectedFile) {
             analyzeBtn.disabled = true;
             resultDiv.innerHTML = `
                 <div style="text-align: center;">
-                    <p>AI가 손금의 각도를 계산하고 있습니다...</p>
+                    <p>AI가 손금의 패턴을 고도로 분석하고 있습니다...</p>
                     <div class="loader"></div>
                 </div>
             `;
@@ -59,11 +91,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 resultDiv.innerHTML = readingHTML;
                 analyzeBtn.disabled = false;
                 
-                // Scroll to result
                 resultDiv.scrollIntoView({ behavior: 'smooth' });
             }, 2500);
         } else {
-            resultDiv.innerHTML = '<p style="color: #e74c3c; font-weight: bold;">⚠️ 손금 사진을 먼저 업로드해주세요!</p>';
+            resultDiv.innerHTML = '<p style="color: #e74c3c; font-weight: bold;">⚠️ 분석을 위해 손금 사진을 먼저 업로드하거나 드래그해 주세요!</p>';
         }
     });
 });

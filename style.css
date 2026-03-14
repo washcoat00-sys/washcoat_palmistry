@@ -89,6 +89,13 @@ main {
     text-align: center;
     box-shadow: var(--shadow);
     margin-bottom: 2rem;
+    border: 2px dashed transparent;
+    transition: border-color 0.3s, background-color 0.3s;
+}
+
+.upload-section.drag-over {
+    border-color: var(--accent-color);
+    background-color: rgba(52, 152, 219, 0.05);
 }
 
 #palmImage {
@@ -97,29 +104,46 @@ main {
 
 .custom-file-upload {
     display: inline-block;
-    padding: 0.8rem 1.5rem;
+    padding: 1rem 2rem;
     cursor: pointer;
     background-color: var(--accent-color);
     color: white;
-    border-radius: 8px;
-    margin-bottom: 1rem;
+    border-radius: 12px;
+    margin-bottom: 1.5rem;
     font-weight: bold;
-    transition: background 0.2s;
+    transition: background 0.2s, transform 0.1s;
 }
 
 .custom-file-upload:hover {
     background-color: var(--accent-hover);
+    transform: translateY(-2px);
 }
 
-#imagePreviewContainer {
+.preview-container {
     margin: 1.5rem auto;
-    max-width: 300px;
+    max-width: 350px;
+    min-height: 200px;
+    border: 1px solid rgba(0,0,0,0.1);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0,0,0,0.02);
+    position: relative;
+    overflow: hidden;
 }
 
-#imagePreviewContainer img {
+.placeholder-text {
+    color: var(--text-color);
+    opacity: 0.5;
+    font-size: 0.9rem;
+    padding: 1rem;
+}
+
+.preview-container img {
     width: 100%;
-    border-radius: 10px;
-    box-shadow: var(--shadow);
+    height: 100%;
+    object-fit: cover;
     display: block;
 }
 

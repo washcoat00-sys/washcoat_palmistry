@@ -24,7 +24,8 @@ The project has a basic functional structure with image upload, simulated analys
 
 ### 3. **JavaScript Logic (`main.js`)**
     * Add a theme toggle function that persists in local storage.
-    * Implement an image preview feature that triggers when a file is selected.
+    * Implement an image preview feature that triggers when a file is selected or dropped.
+    * Add Drag-and-Drop support for the palm image upload section.
     * Expand the `palmReadings` object with more detailed and varied interpretations.
     * Ensure the analysis flow is smooth (show loading -> show results).
 
