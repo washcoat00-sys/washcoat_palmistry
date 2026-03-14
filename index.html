@@ -14,18 +14,49 @@
     </header>
     <main>
         <section class="intro">
-            <p>당신의 손바닥에 숨겨진 운명의 지도를 발견하세요. AI 손금 분석으로 당신의 성격, 건강, 그리고 미래의 가능성을 엿볼 수 있습니다.</p>
+            <p>타고난 운명(선천운)과 스스로 개척한 운명(후천운)을 모두 확인하세요.<br>왼손과 오른손의 조화로운 분석을 통해 더 깊은 통찰을 제공합니다.</p>
         </section>
-        <div class="upload-section" id="dropZone">
-            <label for="palmImage" class="custom-file-upload">
-                📸 손금 사진 업로드 (또는 드래그하여 놓기)
-            </label>
-            <input type="file" id="palmImage" accept="image/*">
-            <div id="imagePreviewContainer" class="preview-container">
-                <p class="placeholder-text">사진을 업로드하면 이곳에 미리보기가 나타납니다.</p>
+
+        <section class="user-info">
+            <div class="input-group">
+                <label>성별</label>
+                <div class="gender-selection">
+                    <input type="radio" id="male" name="gender" value="male" checked>
+                    <label for="male">남성</label>
+                    <input type="radio" id="female" name="gender" value="female">
+                    <label for="female">여성</label>
+                </div>
             </div>
-            <button id="analyzeBtn">분석 시작하기</button>
+            <div class="input-group">
+                <label for="age">만 나이</label>
+                <input type="number" id="age" min="1" max="120" value="25">
+            </div>
+        </section>
+
+        <div class="upload-container">
+            <div class="upload-box" id="dropZoneLeft">
+                <h3>✋ 왼손 (선천운/유전)</h3>
+                <label for="palmImageLeft" class="custom-file-upload">사진 선택/드롭</label>
+                <input type="file" id="palmImageLeft" accept="image/*">
+                <div id="previewLeft" class="preview-container">
+                    <p class="placeholder-text">왼손 사진</p>
+                </div>
+            </div>
+
+            <div class="upload-box" id="dropZoneRight">
+                <h3>✋ 오른손 (후천운/노력)</h3>
+                <label for="palmImageRight" class="custom-file-upload">사진 선택/드롭</label>
+                <input type="file" id="palmImageRight" accept="image/*">
+                <div id="previewRight" class="preview-container">
+                    <p class="placeholder-text">오른손 사진</p>
+                </div>
+            </div>
         </div>
+
+        <div class="action-section">
+            <button id="analyzeBtn" class="primary-btn">양손 종합 분석하기</button>
+        </div>
+
         <div id="result" class="result-section"></div>
     </main>
     <footer>

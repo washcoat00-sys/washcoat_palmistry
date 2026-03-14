@@ -8,26 +8,25 @@ This project is a web-based application that provides palm readings based on an 
 
 The project has a basic functional structure with image upload, simulated analysis, and initial styling.
 
-## Plan for Current Version (Theme Toggle, Image Preview, & Enhanced Readings)
+## Plan for Current Version (Dual Palm, Gender, & Age Integration)
 
 ### 1. **HTML Structure (`index.html`)**
-    * Add a service description section ("AI Palm Reader - Uncover your destiny...").
-    * Include a theme toggle button in the header.
-    * Add an image preview container (`<div id="imagePreviewContainer">`) to display the uploaded palm.
-    * Refine the results section for better readability.
+    * Add Gender selection (Male/Female) and Age input field.
+    * Create two distinct upload zones: **Left Palm (Congenital/Early Life)** and **Right Palm (Acquired/Later Life)**.
+    * Each zone will have its own drag-and-drop area and preview.
 
 ### 2. **Styling (`style.css`)**
-    * Implement CSS variables for colors to support light and dark modes.
-    * Add a `.dark-theme` class to override these variables.
-    * Design the image preview and theme toggle button.
-    * Improve the typography and overall aesthetic (Modern/Minimalist).
+    * Design a responsive layout for dual palm uploads (side-by-side on desktop, stacked on mobile).
+    * Style the new Gender/Age input fields to match the modern aesthetic.
+    * Refine results section to handle comparative analysis (Left vs. Right).
 
 ### 3. **JavaScript Logic (`main.js`)**
-    * Add a theme toggle function that persists in local storage.
-    * Implement an image preview feature that triggers when a file is selected or dropped.
-    * Add Drag-and-Drop support for the palm image upload section.
-    * Expand the `palmReadings` object with more detailed and varied interpretations.
-    * Ensure the analysis flow is smooth (show loading -> show results).
+    * Implement separate file handling and preview logic for Left and Right palms.
+    * Incorporate "Congenital vs. Acquired" logic based on Gender and Age:
+        - **Congenital (선천운):** Based on the primary hand (Left for Men, Right for Women in traditional contexts, or interpreted as the "blueprint").
+        - **Acquired (후천운):** Based on the secondary hand and user efforts.
+        - **Age Influence:** Readings will emphasize 30s as a turning point between congenital and acquired traits.
+    * Expand analysis text to provide comparative insights between the two hands.
 
 ### 4. **Git & Deployment**
     * Commit and push the changes to GitHub.
