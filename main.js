@@ -98,20 +98,24 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             elements.video.srcObject = stream;
             
-            // Set button text based on missing hand
-            if (!processedHands.left) {
-                elements.captureBtn.textContent = "📸 왼손";
-            } else if (!processedHands.right) {
-                elements.captureBtn.textContent = "📸 오른손";
-            } else {
-                elements.captureBtn.textContent = "📸 다시 촬영";
-            }
+            // Set initial button text based on missing hand
+            updateCaptureButtonText();
             
             elements.cameraModal.style.display = 'flex'; // Use flex to match style.css
         } catch (err) {
             alert('카메라에 접근할 수 없습니다. 권한을 확인해주세요.');
         }
     });
+
+    function updateCaptureButtonText() {
+        if (!processedHands.left) {
+            elements.captureBtn.textContent = "📸 왼손";
+        } else if (!processedHands.right) {
+            elements.captureBtn.textContent = "📸 오른손";
+        } else {
+            elements.captureBtn.textContent = "📸 다시 촬영";
+        }
+    }
 
     const stopCamera = () => {
         if (stream) {
@@ -141,18 +145,20 @@ document.addEventListener('DOMContentLoaded', () => {
             await processImage(file);
             updateAnalysisUI();
             
-            // Show "All captured" only when both hands are ready
             const bothDone = processedHands.left && processedHands.right;
             if (bothDone) {
                 elements.captureBtn.textContent = "✅ 촬영 완료!";
+                setTimeout(() => {
+                    elements.captureBtn.disabled = false;
+                    stopCamera();
+                }, 1000);
             } else {
                 elements.captureBtn.textContent = "✅ 저장됨";
+                setTimeout(() => {
+                    elements.captureBtn.disabled = false;
+                    updateCaptureButtonText();
+                }, 1000);
             }
-            
-            setTimeout(() => {
-                elements.captureBtn.disabled = false;
-                stopCamera();
-            }, 800);
         }, 'image/png');
     });
 
