@@ -4,8 +4,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Palm Reader</title>
+    <title>AI Palm Reader - 스마트 손금 분석</title>
     <link rel="stylesheet" href="style.css">
+    <!-- MediaPipe Hands for auto-detection and landmarking -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
 </head>
 <body>
     <header>
@@ -14,7 +17,7 @@
     </header>
     <main>
         <section class="intro">
-            <p>타고난 운명(선천운)과 스스로 개척한 운명(후천운)을 모두 확인하세요.<br>왼손과 오른손의 조화로운 분석을 통해 더 깊은 통찰을 제공합니다.</p>
+            <p><strong>스마트 AI가 당신의 손금을 자동으로 찾아 드립니다.</strong><br>양손 사진을 함께 올리면 자동으로 좌우를 구별하고 주요 선들을 분석합니다.</p>
         </section>
 
         <section class="user-info">
@@ -33,28 +36,33 @@
             </div>
         </section>
 
-        <div class="upload-container">
-            <div class="upload-box" id="dropZoneLeft">
-                <h3>✋ 왼손 (선천운/유전)</h3>
-                <label for="palmImageLeft" class="custom-file-upload">사진 선택/드롭</label>
-                <input type="file" id="palmImageLeft" accept="image/*">
-                <div id="previewLeft" class="preview-container">
-                    <p class="placeholder-text">왼손 사진</p>
+        <div class="unified-upload-section" id="dropZone">
+            <label for="palmImages" class="custom-file-upload">
+                📸 양손 사진 업로드 (한 번에 선택 또는 드롭)
+            </label>
+            <input type="file" id="palmImages" accept="image/*" multiple>
+            <p class="upload-hint">사진을 올리면 AI가 자동으로 왼손/오른손을 판별합니다.</p>
+        </div>
+
+        <div class="analysis-container">
+            <div class="analysis-box" id="boxLeft">
+                <div class="box-header">✋ 왼손 (선천운)</div>
+                <div class="canvas-wrapper">
+                    <canvas id="canvasLeft"></canvas>
+                    <div id="previewLeft" class="preview-placeholder">대기 중...</div>
                 </div>
             </div>
-
-            <div class="upload-box" id="dropZoneRight">
-                <h3>✋ 오른손 (후천운/노력)</h3>
-                <label for="palmImageRight" class="custom-file-upload">사진 선택/드롭</label>
-                <input type="file" id="palmImageRight" accept="image/*">
-                <div id="previewRight" class="preview-container">
-                    <p class="placeholder-text">오른손 사진</p>
+            <div class="analysis-box" id="boxRight">
+                <div class="box-header">✋ 오른손 (후천운)</div>
+                <div class="canvas-wrapper">
+                    <canvas id="canvasRight"></canvas>
+                    <div id="previewRight" class="preview-placeholder">대기 중...</div>
                 </div>
             </div>
         </div>
 
         <div class="action-section">
-            <button id="analyzeBtn" class="primary-btn">양손 종합 분석하기</button>
+            <button id="analyzeBtn" class="primary-btn" disabled>분석을 위해 사진을 올려주세요</button>
         </div>
 
         <div id="result" class="result-section"></div>

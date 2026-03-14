@@ -8,25 +8,29 @@ This project is a web-based application that provides palm readings based on an 
 
 The project has a basic functional structure with image upload, simulated analysis, and initial styling.
 
-## Plan for Current Version (Dual Palm, Gender, & Age Integration)
+## Plan for Current Version (Auto-Detection & Line Visualization)
 
 ### 1. **HTML Structure (`index.html`)**
-    * Add Gender selection (Male/Female) and Age input field.
-    * Create two distinct upload zones: **Left Palm (Congenital/Early Life)** and **Right Palm (Acquired/Later Life)**.
-    * Each zone will have its own drag-and-drop area and preview.
+    * Add a unified upload zone that accepts multiple images.
+    * Use `<canvas>` elements for overlays on image previews.
+    * Integrate MediaPipe Hands SDK via CDN.
 
 ### 2. **Styling (`style.css`)**
-    * Design a responsive layout for dual palm uploads (side-by-side on desktop, stacked on mobile).
-    * Style the new Gender/Age input fields to match the modern aesthetic.
-    * Refine results section to handle comparative analysis (Left vs. Right).
+    * Refine the result output with a cleaner, more structured layout (e.g., cards with icons).
+    * Ensure the canvas overlays are positioned correctly over the images.
+    * Improve the "Loading" state with more informative steps (e.g., "Detecting hand...", "Identifying lines...").
 
 ### 3. **JavaScript Logic (`main.js`)**
-    * Implement separate file handling and preview logic for Left and Right palms.
-    * Incorporate "Congenital vs. Acquired" logic based on Gender and Age:
-        - **Congenital (선천운):** Based on the primary hand (Left for Men, Right for Women in traditional contexts, or interpreted as the "blueprint").
-        - **Acquired (후천운):** Based on the secondary hand and user efforts.
-        - **Age Influence:** Readings will emphasize 30s as a turning point between congenital and acquired traits.
-    * Expand analysis text to provide comparative insights between the two hands.
+    * Use **MediaPipe Hands** to:
+        - Detect if the uploaded hand is **Left** or **Right**.
+        - Get coordinates for the palm lines (based on hand landmarks).
+    * Draw lines on the `<canvas>`:
+        - **Life Line:** Curve around the thumb base (landmarks 1, 2, 5, etc.).
+        - **Head Line:** Across from the side to the center (landmarks 5, 13, 17 approx).
+        - **Heart Line:** Below the finger bases (landmarks 5, 9, 13, 17).
+        - **Fate Line:** Vertical through the center (wrist to middle finger base).
+    * Automatically assign the detected images to the correct slots (Left/Right).
+    * Redesign the `resultDiv` to show clear, digestible insights with better spacing and readability.
 
 ### 4. **Git & Deployment**
     * Commit and push the changes to GitHub.

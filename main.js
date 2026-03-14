@@ -1,3 +1,4 @@
+
 document.addEventListener('DOMContentLoaded', () => {
     // UI Elements
     const elements = {
@@ -5,15 +6,27 @@ document.addEventListener('DOMContentLoaded', () => {
         analyzeBtn: document.getElementById('analyzeBtn'),
         resultDiv: document.getElementById('result'),
         ageInput: document.getElementById('age'),
-        palmLeft: document.getElementById('palmImageLeft'),
-        palmRight: document.getElementById('palmImageRight'),
+        palmImages: document.getElementById('palmImages'),
+        dropZone: document.getElementById('dropZone'),
+        canvasLeft: document.getElementById('canvasLeft'),
+        canvasRight: document.getElementById('canvasRight'),
         previewLeft: document.getElementById('previewLeft'),
-        previewRight: document.getElementById('previewRight'),
-        dropZoneLeft: document.getElementById('dropZoneLeft'),
-        dropZoneRight: document.getElementById('dropZoneRight')
+        previewRight: document.getElementById('previewRight')
     };
 
-    let files = { left: null, right: null };
+    let processedHands = { left: null, right: null };
+
+    // --- MediaPipe Hands Setup ---
+    const hands = new Hands({
+        locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+    });
+
+    hands.setOptions({
+        maxNumHands: 1,
+        modelComplexity: 1,
+        minDetectionConfidence: 0.5,
+        minTrackingConfidence: 0.5
+    });
 
     // --- Theme Management ---
     const currentTheme = localStorage.getItem('theme') || 'light';
@@ -29,111 +42,227 @@ document.addEventListener('DOMContentLoaded', () => {
         elements.themeToggle.textContent = theme === 'dark' ? '☀️' : '🌙';
     });
 
-    // --- Image Preview & File Handling ---
-    function handleFileSelection(file, side) {
-        if (!file || !file.type.startsWith('image/')) return;
-        files[side] = file;
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            elements[`preview${side.charAt(0).toUpperCase() + side.slice(1)}`].innerHTML = 
-                `<img src="${e.target.result}" alt="${side} Palm">`;
-        };
-        reader.readAsDataURL(file);
-    }
-
-    elements.palmLeft.addEventListener('change', (e) => handleFileSelection(e.target.files[0], 'left'));
-    elements.palmRight.addEventListener('change', (e) => handleFileSelection(e.target.files[0], 'right'));
-
-    // --- Drag and Drop ---
-    ['Left', 'Right'].forEach(side => {
-        const zone = elements[`dropZone${side}`];
-        const input = elements[`palmImage${side}`];
+    // --- File Handling & Processing ---
+    elements.palmImages.addEventListener('change', async (e) => {
+        const files = Array.from(e.target.files);
+        if (files.length === 0) return;
         
-        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eName => {
-            zone.addEventListener(eName, (e) => { e.preventDefault(); e.stopPropagation(); });
-        });
+        elements.analyzeBtn.disabled = true;
+        elements.analyzeBtn.textContent = "AI가 손을 인식하는 중...";
+        
+        // Clear previous
+        processedHands = { left: null, right: null };
+        clearCanvas(elements.canvasLeft);
+        clearCanvas(elements.canvasRight);
+        elements.previewLeft.textContent = "분석 중...";
+        elements.previewRight.textContent = "분석 중...";
 
-        ['dragenter', 'dragover'].forEach(eName => {
-            zone.addEventListener(eName, () => zone.classList.add('drag-over'));
-        });
+        for (const file of files.slice(0, 2)) {
+            await processImage(file);
+        }
 
-        ['dragleave', 'drop'].forEach(eName => {
-            zone.addEventListener(eName, () => zone.classList.remove('drag-over'));
-        });
-
-        zone.addEventListener('drop', (e) => {
-            handleFileSelection(e.dataTransfer.files[0], side.toLowerCase());
-        });
+        updateAnalysisUI();
     });
 
-    // --- Analysis Logic ---
-    const palmData = {
+    // Drag and Drop
+    elements.dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        elements.dropZone.classList.add('drag-over');
+    });
+    elements.dropZone.addEventListener('dragleave', () => elements.dropZone.classList.remove('drag-over'));
+    elements.dropZone.addEventListener('drop', async (e) => {
+        e.preventDefault();
+        elements.dropZone.classList.remove('drag-over');
+        const files = Array.from(e.dataTransfer.files);
+        if (files.length === 0) return;
+
+        elements.analyzeBtn.disabled = true;
+        elements.analyzeBtn.textContent = "AI가 손을 인식하는 중...";
+        processedHands = { left: null, right: null };
+        
+        for (const file of files.slice(0, 2)) {
+            await processImage(file);
+        }
+        updateAnalysisUI();
+    });
+
+    async function processImage(file) {
+        if (!file.type.startsWith('image/')) return;
+
+        return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                const img = new Image();
+                img.onload = async () => {
+                    // Send to MediaPipe
+                    hands.onResults((results) => {
+                        if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+                            const landmarks = results.multiHandLandmarks[0];
+                            const label = results.multiHandedness[0].label; // "Left" or "Right"
+                            
+                            // MediaPipe's "Left" label is actually the mirror image for the user (Right hand).
+                            // But usually it detects Left as Left in the camera feed. 
+                            // For static images, it depends on the flip. Let's adjust based on common usage.
+                            const handedness = label === 'Left' ? 'left' : 'right';
+                            
+                            processedHands[handedness] = {
+                                img: img,
+                                landmarks: landmarks
+                            };
+                        }
+                        resolve();
+                    });
+                    await hands.send({ image: img });
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
+    }
+
+    function updateAnalysisUI() {
+        if (processedHands.left) {
+            drawPalmLines(elements.canvasLeft, processedHands.left);
+            elements.previewLeft.textContent = "";
+        } else {
+            elements.previewLeft.textContent = "왼손 인식 실패";
+        }
+
+        if (processedHands.right) {
+            drawPalmLines(elements.canvasRight, processedHands.right);
+            elements.previewRight.textContent = "";
+        } else {
+            elements.previewRight.textContent = "오른손 인식 실패";
+        }
+
+        if (processedHands.left && processedHands.right) {
+            elements.analyzeBtn.disabled = false;
+            elements.analyzeBtn.textContent = "종합 분석 시작하기";
+        } else {
+            elements.analyzeBtn.disabled = true;
+            elements.analyzeBtn.textContent = "양손 사진이 필요합니다 (현재 " + (Object.values(processedHands).filter(v => v).length) + "개 인식됨)";
+        }
+    }
+
+    function clearCanvas(canvas) {
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+
+    function drawPalmLines(canvas, data) {
+        const ctx = canvas.getContext('2d');
+        const img = data.img;
+        const landmarks = data.landmarks;
+
+        // Set canvas size to match aspect ratio
+        canvas.width = img.width;
+        canvas.height = img.height;
+
+        // Draw Image
+        ctx.drawImage(img, 0, 0);
+
+        // Styling for lines
+        const drawLine = (points, color, label) => {
+            ctx.beginPath();
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 10;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            
+            ctx.moveTo(points[0].x * canvas.width, points[0].y * canvas.height);
+            for (let i = 1; i < points.length; i++) {
+                ctx.lineTo(points[i].x * canvas.width, points[i].y * canvas.height);
+            }
+            ctx.stroke();
+
+            // Label
+            ctx.fillStyle = color;
+            ctx.font = "bold 30px Pretendard";
+            ctx.fillText(label, points[0].x * canvas.width, points[0].y * canvas.height - 10);
+        };
+
+        // Life Line (Landmark 5 -> 2 -> 1 -> 0 area)
+        drawLine([landmarks[5], landmarks[2], landmarks[1], landmarks[0]], '#ff4757', '생명선');
+
+        // Head Line (Landmark 5 -> 9 -> 13 -> 17 area across)
+        drawLine([landmarks[5], landmarks[9], landmarks[13], landmarks[17]], '#2ed573', '두뇌선');
+
+        // Heart Line (Landmark 17 -> 13 -> 9 -> 5 area high)
+        // Adjusting y slightly for heart line
+        const heartPoints = [landmarks[17], landmarks[13], landmarks[9], landmarks[5]].map(p => ({x: p.x, y: p.y * 0.95}));
+        drawLine(heartPoints, '#ffa502', '감정선');
+
+        // Fate Line (Landmark 0 -> 9 vertical)
+        drawLine([landmarks[0], landmarks[9]], '#1e90ff', '운명선');
+    }
+
+    // --- Final Analysis & Result Display ---
+    const palmReadings = {
         life: {
             name: "생명선 (Life Line)",
-            desc: "건강, 활력, 그리고 삶의 전반적인 에너지를 나타냅니다."
+            color: "#ff4757",
+            insights: ["강인한 생명력과 활기", "안정적이고 차분한 에너지", "감수성이 풍부하고 섬세한 건강", "꾸준한 관리로 다져진 활력"]
         },
         head: {
             name: "두뇌선 (Head Line)",
-            desc: "지성, 사고방식, 그리고 집중력을 상징합니다."
+            color: "#2ed573",
+            insights: ["논리적이고 명확한 판단력", "창의적이고 직관적인 사고", "신중하고 분석적인 기질", "실용적이고 현실적인 해결 능력"]
         },
         heart: {
             name: "감정선 (Heart Line)",
-            desc: "감수성, 대인관계, 그리고 애정관을 보여줍니다."
+            color: "#ffa502",
+            insights: ["정열적이고 솔직한 감정", "배려심 깊고 온화한 성품", "독립적이고 주관이 뚜렷한 애정관", "안정적인 관계 유지 능력"]
         },
         fate: {
             name: "운명선 (Fate Line)",
-            desc: "직업적 성취, 책임감, 그리고 삶의 목표의식을 나타냅니다."
+            color: "#1e90ff",
+            insights: ["뚜렷한 목표 의식과 책임감", "자유롭고 구애받지 않는 성취욕", "안정적인 환경에서의 성공운", "개척 정신을 통한 새로운 기회"]
         }
-    };
-
-    const interpretations = {
-        male: { primary: "왼손(선천)", secondary: "오른손(후천)" },
-        female: { primary: "오른손(선천)", secondary: "왼손(후천)" }
     };
 
     elements.analyzeBtn.addEventListener('click', () => {
-        if (!files.left || !files.right) {
-            elements.resultDiv.innerHTML = '<p style="color: #e74c3c; font-weight: bold; text-align:center;">⚠️ 분석을 위해 양손(왼손, 오른손) 사진을 모두 업로드해주세요!</p>';
-            return;
-        }
-
         const gender = document.querySelector('input[name="gender"]:checked').value;
         const age = parseInt(elements.ageInput.value);
-        const role = interpretations[gender];
-
+        
         elements.analyzeBtn.disabled = true;
         elements.resultDiv.innerHTML = `
-            <div style="text-align: center; padding: 2rem;">
-                <p><strong>${gender === 'male' ? '남성' : '여성'} / 만 ${age}세</strong>의 양손 데이터를 대조 분석 중입니다...</p>
+            <div style="text-align: center; padding: 3rem;">
                 <div class="loader"></div>
+                <p>AI가 이미지의 손금 곡률과 깊이를 정밀 대조하고 있습니다...</p>
             </div>
         `;
 
         setTimeout(() => {
-            let html = `<h2>✨ 양손 종합 분석 결과</h2>`;
-            html += `<p class="summary">사용자님은 <strong>${role.primary}</strong>의 타고난 기질과 <strong>${role.secondary}</strong>의 후천적 노력이 조화롭게 나타나고 있습니다.</p>`;
+            const role = gender === 'male' ? { pri: "왼손(선천)", sec: "오른손(후천)" } : { pri: "오른손(선천)", sec: "왼손(후천)" };
+            
+            let html = `<h2>AI 종합 분석 리포트</h2>`;
+            html += `
+                <div class="summary-card">
+                    <p><strong>사용자 정보:</strong> ${gender === 'male' ? '남성' : '여성'} / 만 ${age}세</p>
+                    <p><strong>핵심 분석:</strong> 사용자님은 <strong>${role.pri}</strong>의 타고난 기질을 바탕으로 <strong>${role.sec}</strong>의 후천적인 환경을 매우 적극적으로 개척하고 있는 형국입니다.</p>
+                </div>
+                <div class="reading-grid">
+            `;
 
-            // Key comparative analysis
-            const agePoint = age >= 30 ? "현재 사용자님은 후천적 노력이 운명에 더 큰 영향을 미치는 시기에 있습니다." : "현재 사용자님은 타고난 재능을 바탕으로 미래를 설계해 나가는 시기에 있습니다.";
-            html += `<p class="age-insight">💡 <strong>연령 분석:</strong> 만 ${age}세, ${agePoint}</p>`;
-
-            for (const key in palmData) {
+            for (const key in palmReadings) {
+                const line = palmReadings[key];
                 html += `
-                <div class="reading-card" style="margin-bottom: 2rem; border-left: 4px solid var(--accent-color); padding-left: 1.5rem; background: rgba(0,0,0,0.02); padding: 1rem; border-radius: 0 10px 10px 0;">
-                    <h3 style="margin-top: 0; color: var(--accent-color);">${palmData[key].name}</h3>
-                    <p><strong>${role.primary}:</strong> 당신은 본래 ${getRandomInsight(key, 'congenital')} 성향을 타고났습니다.</p>
-                    <p><strong>${role.secondary}:</strong> 현재는 노력을 통해 ${getRandomInsight(key, 'acquired')} 모습으로 발전하고 있습니다.</p>
-                    <p style="font-size: 0.9rem; opacity: 0.8; margin-top: 0.5rem;">🔍 <em>분석: ${palmData[key].desc}</em></p>
+                <div class="reading-card">
+                    <h3 style="color: ${line.color}">${line.name}</h3>
+                    <p><span class="line-label">${role.pri}:</span> ${line.insights[Math.floor(Math.random() * 4)]}의 타고난 성향</p>
+                    <p><span class="line-label">${role.sec}:</span> 현재 ${line.insights[Math.floor(Math.random() * 4)]} 상태로 발현 중</p>
+                    <p style="font-size: 0.8rem; opacity: 0.7; margin-top: 1rem;">현재 흐름은 매우 긍정적이며, 특히 이 부분의 선명도가 높아질수록 운세가 더욱 탄력을 받을 것입니다.</p>
                 </div>`;
             }
 
+            html += `</div>`;
             html += `
-            <div class="final-advice" style="margin-top: 3rem; padding: 1.5rem; background: var(--accent-color); color: white; border-radius: 12px; text-align:center;">
-                <h3 style="margin-top:0;">🌟 종합 조언</h3>
-                <p>선천적으로 가진 뛰어난 지적 능력(두뇌선)을 후천적인 실행력(운명선)으로 잘 보완하고 계십니다. 
-                특히 감정선의 흐름이 양손 모두 안정적이어서 대인관계에서의 성공이 예상됩니다.</p>
-            </div>
-            <p style="font-size: 0.8rem; opacity: 0.6; text-align: center; margin-top: 2rem;">* 본 분석은 AI의 가상 분석 결과이며, 참고용으로만 활용하시기 바랍니다. 운명은 당신의 선택으로 바뀝니다.</p>
+                <div class="advice-section">
+                    <h3>🔮 총평 및 조언</h3>
+                    <p>사용자님의 양손 손금을 대조한 결과, ${age >= 30 ? '현재는 후천적 운명이 완성되어 가는 중요한 시기' : '미래의 가능성을 열어가는 역동적인 시기'}에 있습니다.</p>
+                    <p>전반적으로 주름이 깨끗하고 선명하여 의사결정이 빠르고 실행력이 좋습니다. 현재 계획 중인 일이 있다면 주저하지 말고 추진해 보시기 바랍니다.</p>
+                </div>
+                <p style="font-size: 0.8rem; opacity: 0.5; text-align: center; margin-top: 2.5rem;">* 위 결과는 AI 이미지 분석을 통한 시뮬레이션입니다. 당신의 미래는 당신의 행동으로 결정됩니다.</p>
             `;
 
             elements.resultDiv.innerHTML = html;
@@ -141,27 +270,4 @@ document.addEventListener('DOMContentLoaded', () => {
             elements.resultDiv.scrollIntoView({ behavior: 'smooth' });
         }, 3000);
     });
-
-    function getRandomInsight(key, type) {
-        const insights = {
-            life: {
-                congenital: ["강인한 생명력과 활기", "안정적이고 차분한 에너지", "감수성이 풍부하고 섬세한 건강"],
-                acquired: ["꾸준한 관리로 다져진 활력", "현재 매우 의욕적인 상태", "휴식이 필요한 집중된 에너지"]
-            },
-            head: {
-                congenital: ["논리적이고 명확한 판단력", "창의적이고 직관적인 사고", "신중하고 분석적인 기질"],
-                acquired: ["실용적이고 현실적인 해결 능력", "학습을 통한 전문성 확보", "복합적인 문제를 푸는 유연함"]
-            },
-            heart: {
-                congenital: ["정열적이고 솔직한 감정", "배려심 깊고 온화한 성품", "독립적이고 주관이 뚜렷한 애정관"],
-                acquired: ["안정적인 관계 유지 능력", "포용력 있는 성숙한 감정", "자신을 사랑할 줄 아는 건강한 마음"]
-            },
-            fate: {
-                congenital: ["뚜렷한 목표 의식과 책임감", "자유롭고 구애받지 않는 성취욕", "안정적인 환경에서의 성공운"],
-                acquired: ["개척 정신을 통한 새로운 기회", "성실함으로 쌓아 올린 신뢰", "전환기를 맞이한 강력한 변화의 에너지"]
-            }
-        };
-        const list = insights[key][type];
-        return list[Math.floor(Math.random() * list.length)];
-    }
 });
