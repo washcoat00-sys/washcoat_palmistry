@@ -197,10 +197,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const drawPalmLine = (points, color, label) => {
             ctx.beginPath();
             ctx.strokeStyle = color;
-            ctx.lineWidth = 16; // Adjusted for mobile visibility
+            ctx.lineWidth = 8; // Refined for even better visibility balance
             ctx.lineCap = 'round';
             ctx.lineJoin = 'round';
-            ctx.shadowBlur = 10;
+            ctx.shadowBlur = 6;
             ctx.shadowColor = 'rgba(0,0,0,0.5)';
             
             ctx.moveTo(points[0].x * canvas.width, points[0].y * canvas.height);
@@ -210,16 +210,16 @@ document.addEventListener('DOMContentLoaded', () => {
             ctx.stroke();
             ctx.shadowBlur = 0;
 
-            // Mobile-Friendly Label
+            // Compact Label for precise view
             const text = label;
-            ctx.font = "bold 42px Pretendard"; // Balanced font size
+            ctx.font = "bold 20px Pretendard"; // User requested size
             const textWidth = ctx.measureText(text).width;
             const x = points[0].x * canvas.width;
-            const y = points[0].y * canvas.height - 30;
+            const y = points[0].y * canvas.height - 15;
             
-            // Text Background with balanced padding
+            // Text Background with compact padding
             ctx.fillStyle = color;
-            ctx.fillRect(x - 10, y - 42, textWidth + 20, 56);
+            ctx.fillRect(x - 5, y - 20, textWidth + 10, 28);
             
             // White text for high contrast
             ctx.fillStyle = "#ffffff";
@@ -227,8 +227,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Subtle border for the label box
             ctx.strokeStyle = "#ffffff";
-            ctx.lineWidth = 2;
-            ctx.strokeRect(x - 10, y - 42, textWidth + 20, 56);
+            ctx.lineWidth = 1;
+            ctx.strokeRect(x - 5, y - 20, textWidth + 10, 28);
         };
 
         drawPalmLine([landmarks[5], landmarks[2], landmarks[1], landmarks[0]], '#ff4757', '생명선');
