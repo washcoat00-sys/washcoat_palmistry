@@ -1,14 +1,27 @@
-<!doctype html>
+
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Hello World</title>
-  <link href='/style.css' rel='stylesheet'>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Palm Reader</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <h1>Hello, world!</h1>
-  <button onclick="console.log('hello');">Press me</button>
-  <script defer type="text/javascript" src="/main.js"></script>
+    <header>
+        <h1>AI Palm Reader</h1>
+    </header>
+    <main>
+        <div class="upload-section">
+            <p>Upload a picture of your palm to get your reading.</p>
+            <input type="file" id="palmImage" accept="image/*">
+            <button id="analyzeBtn">Analyze</button>
+        </div>
+        <div id="result" class="result-section"></div>
+    </main>
+    <footer>
+        <p>&copy; 2024 AI Palm Reader</p>
+    </footer>
+    <script src="main.js"></script>
 </body>
 </html>
