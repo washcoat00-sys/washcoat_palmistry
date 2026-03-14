@@ -194,10 +194,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const drawPalmLine = (points, color, label) => {
             ctx.beginPath();
             ctx.strokeStyle = color;
-            ctx.lineWidth = 12;
+            ctx.lineWidth = 20;
             ctx.lineCap = 'round';
             ctx.lineJoin = 'round';
-            ctx.shadowBlur = 10;
+            ctx.shadowBlur = 12;
             ctx.shadowColor = color;
             
             ctx.moveTo(points[0].x * canvas.width, points[0].y * canvas.height);
@@ -208,13 +208,14 @@ document.addEventListener('DOMContentLoaded', () => {
             ctx.shadowBlur = 0;
 
             const text = label;
-            ctx.font = "bold 34px Pretendard";
+            ctx.font = "bold 50px Pretendard";
             const textWidth = ctx.measureText(text).width;
             const x = points[0].x * canvas.width;
-            const y = points[0].y * canvas.height - 15;
+            const y = points[0].y * canvas.height - 25;
             
             ctx.fillStyle = color;
-            ctx.fillRect(x - 5, y - 30, textWidth + 10, 40);
+            ctx.fillRect(x - 10, y - 45, textWidth + 20, 60);
+            
             ctx.fillStyle = "#ffffff";
             ctx.fillText(text, x, y);
         };
