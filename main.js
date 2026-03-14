@@ -41,12 +41,15 @@ document.addEventListener('DOMContentLoaded', () => {
             if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
                 const landmarks = results.multiHandLandmarks[0];
                 const label = results.multiHandedness[0].label;
-                // MediaPipe "Left" label -> physical Right.
-                const handedness = label === 'Left' ? 'right' : 'left';
                 
-                // Store image reference globally temporarily to be picked up by the resolver
+                // Use forced handedness if set (for camera capture sequence), 
+                // otherwise auto-detect (for file uploads)
+                // MediaPipe "Left" label usually -> physical Right hand in mirrored view.
+                const detectedHandedness = label === 'Left' ? 'right' : 'left';
+                const finalHandedness = window._targetHand || detectedHandedness;
+                
                 if (window._pendingImg) {
-                    processedHands[handedness] = {
+                    processedHands[finalHandedness] = {
                         img: window._pendingImg,
                         landmarks: landmarks
                     };
@@ -98,10 +101,8 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             elements.video.srcObject = stream;
             
-            // Set initial button text based on missing hand
             updateCaptureButtonText();
-            
-            elements.cameraModal.style.display = 'flex'; // Use flex to match style.css
+            elements.cameraModal.style.display = 'flex';
         } catch (err) {
             alert('카메라에 접근할 수 없습니다. 권한을 확인해주세요.');
         }
@@ -110,10 +111,13 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateCaptureButtonText() {
         if (!processedHands.left) {
             elements.captureBtn.textContent = "📸 왼손";
+            window._targetHand = 'left';
         } else if (!processedHands.right) {
             elements.captureBtn.textContent = "📸 오른손";
+            window._targetHand = 'right';
         } else {
             elements.captureBtn.textContent = "📸 다시 촬영";
+            window._targetHand = null; // Re-detect if already full
         }
     }
 
@@ -123,6 +127,7 @@ document.addEventListener('DOMContentLoaded', () => {
             stream = null;
         }
         elements.cameraModal.style.display = 'none';
+        window._targetHand = null;
     };
 
     if (elements.closeModal) {
@@ -142,6 +147,8 @@ document.addEventListener('DOMContentLoaded', () => {
         
         canvas.toBlob(async (blob) => {
             const file = new File([blob], `capture_${Date.now()}.png`, { type: 'image/png' });
+            
+            // The actual saving happens inside processImage -> hands.onResults
             await processImage(file);
             updateAnalysisUI();
             
@@ -170,6 +177,7 @@ document.addEventListener('DOMContentLoaded', () => {
         elements.analyzeBtn.disabled = true;
         elements.analyzeBtn.textContent = "AI 분석 중...";
         
+        window._targetHand = null; // Ensure auto-detection for file uploads
         for (const file of files) {
             await processImage(file);
         }
@@ -191,6 +199,7 @@ document.addEventListener('DOMContentLoaded', () => {
         elements.analyzeBtn.disabled = true;
         elements.analyzeBtn.textContent = "AI 분석 중...";
         
+        window._targetHand = null; // Ensure auto-detection for file uploads
         for (const file of files) {
             await processImage(file);
         }
