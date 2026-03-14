@@ -297,18 +297,28 @@ canvas {
     left: 0; top: 0; width: 100%; height: 100%;
     background-color: rgba(0,0,0,0.8);
     backdrop-filter: blur(5px);
+    display: none;
+    align-items: center;
+    justify-content: center;
 }
 
 .modal-content {
     background-color: var(--card-bg);
-    margin: 5% auto;
-    padding: 2.5rem;
+    padding: 2rem;
     border-radius: 20px;
     width: 90%;
     max-width: 500px;
     text-align: center;
     position: relative;
     box-shadow: var(--shadow);
+    margin: auto;
+}
+
+@media (max-width: 480px) {
+    .modal-content {
+        padding: 1.5rem;
+        width: 95%;
+    }
 }
 
 .close-modal {

@@ -97,7 +97,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 video: { facingMode: 'environment' } 
             });
             elements.video.srcObject = stream;
-            elements.cameraModal.style.display = 'block';
+            
+            // Set button text based on missing hand
+            if (!processedHands.left) {
+                elements.captureBtn.textContent = "📸 왼손 촬영하기";
+            } else if (!processedHands.right) {
+                elements.captureBtn.textContent = "📸 오른손 촬영하기";
+            } else {
+                elements.captureBtn.textContent = "📸 추가 촬영하기";
+            }
+            
+            elements.cameraModal.style.display = 'flex'; // Use flex to match style.css
         } catch (err) {
             alert('카메라에 접근할 수 없습니다. 권한을 확인해주세요.');
         }
@@ -117,6 +127,10 @@ document.addEventListener('DOMContentLoaded', () => {
     window.addEventListener('click', (e) => { if (e.target === elements.cameraModal) stopCamera(); });
 
     elements.captureBtn.addEventListener('click', () => {
+        const originalText = elements.captureBtn.textContent;
+        elements.captureBtn.textContent = "⌛ 저장 중...";
+        elements.captureBtn.disabled = true;
+
         const canvas = document.createElement('canvas');
         canvas.width = elements.video.videoWidth;
         canvas.height = elements.video.videoHeight;
@@ -125,10 +139,16 @@ document.addEventListener('DOMContentLoaded', () => {
         
         canvas.toBlob(async (blob) => {
             const file = new File([blob], `capture_${Date.now()}.png`, { type: 'image/png' });
-            elements.analyzeBtn.textContent = "AI 분석 중...";
             await processImage(file);
             updateAnalysisUI();
-            stopCamera();
+            
+            // Visual feedback before closing
+            elements.captureBtn.textContent = "✅ 촬영 완료!";
+            setTimeout(() => {
+                elements.captureBtn.disabled = false;
+                elements.captureBtn.textContent = originalText;
+                stopCamera();
+            }, 800);
         }, 'image/png');
     });
 
