@@ -100,11 +100,11 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Set button text based on missing hand
             if (!processedHands.left) {
-                elements.captureBtn.textContent = "📸 왼손 촬영하기";
+                elements.captureBtn.textContent = "📸 왼손";
             } else if (!processedHands.right) {
-                elements.captureBtn.textContent = "📸 오른손 촬영하기";
+                elements.captureBtn.textContent = "📸 오른손";
             } else {
-                elements.captureBtn.textContent = "📸 추가 촬영하기";
+                elements.captureBtn.textContent = "📸 다시 촬영";
             }
             
             elements.cameraModal.style.display = 'flex'; // Use flex to match style.css
@@ -127,7 +127,6 @@ document.addEventListener('DOMContentLoaded', () => {
     window.addEventListener('click', (e) => { if (e.target === elements.cameraModal) stopCamera(); });
 
     elements.captureBtn.addEventListener('click', () => {
-        const originalText = elements.captureBtn.textContent;
         elements.captureBtn.textContent = "⌛ 저장 중...";
         elements.captureBtn.disabled = true;
 
@@ -142,11 +141,16 @@ document.addEventListener('DOMContentLoaded', () => {
             await processImage(file);
             updateAnalysisUI();
             
-            // Visual feedback before closing
-            elements.captureBtn.textContent = "✅ 촬영 완료!";
+            // Show "All captured" only when both hands are ready
+            const bothDone = processedHands.left && processedHands.right;
+            if (bothDone) {
+                elements.captureBtn.textContent = "✅ 촬영 완료!";
+            } else {
+                elements.captureBtn.textContent = "✅ 저장됨";
+            }
+            
             setTimeout(() => {
                 elements.captureBtn.disabled = false;
-                elements.captureBtn.textContent = originalText;
                 stopCamera();
             }, 800);
         }, 'image/png');
