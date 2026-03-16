@@ -23,44 +23,44 @@ document.addEventListener('DOMContentLoaded', () => {
     let stream = null;
 
     // --- MediaPipe Hands Setup ---
-    let hands;
+    let hands = null;
     try {
-        hands = new Hands({
-            locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
-        });
+        if (typeof Hands !== 'undefined') {
+            hands = new Hands({
+                locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+            });
 
-        hands.setOptions({
-            maxNumHands: 1,
-            modelComplexity: 1,
-            minDetectionConfidence: 0.5,
-            minTrackingConfidence: 0.5
-        });
+            hands.setOptions({
+                maxNumHands: 1,
+                modelComplexity: 1,
+                minDetectionConfidence: 0.5,
+                minTrackingConfidence: 0.5
+            });
 
-        // Set up global callback once
-        hands.onResults((results) => {
-            if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
-                const landmarks = results.multiHandLandmarks[0];
-                const label = results.multiHandedness[0].label;
-                
-                // Use forced handedness if set (for camera capture sequence), 
-                // otherwise auto-detect (for file uploads)
-                // MediaPipe "Left" label usually -> physical Right hand in mirrored view.
-                const detectedHandedness = label === 'Left' ? 'right' : 'left';
-                const finalHandedness = window._targetHand || detectedHandedness;
-                
+            hands.onResults((results) => {
                 if (window._pendingImg) {
-                    processedHands[finalHandedness] = {
-                        img: window._pendingImg,
-                        landmarks: landmarks
-                    };
+                    const img = window._pendingImg;
+                    let landmarks = null;
+                    let detectedHandedness = 'left';
+
+                    if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+                        landmarks = results.multiHandLandmarks[0];
+                        if (results.multiHandedness && results.multiHandedness.length > 0) {
+                            const label = results.multiHandedness[0].label;
+                            detectedHandedness = label === 'Left' ? 'right' : 'left';
+                        }
+                    }
+
+                    const finalHandedness = window._targetHand || detectedHandedness;
+                    processedHands[finalHandedness] = { img, landmarks };
                     delete window._pendingImg;
                 }
-            }
-            if (window._processResolver) {
-                window._processResolver();
-                delete window._processResolver;
-            }
-        });
+                if (window._processResolver) {
+                    window._processResolver();
+                    delete window._processResolver;
+                }
+            });
+        }
     } catch (e) {
         console.error("MediaPipe Hands failed to initialize:", e);
     }
@@ -79,33 +79,86 @@ document.addEventListener('DOMContentLoaded', () => {
         elements.themeToggle.textContent = theme === 'dark' ? '☀️' : '🌙';
     });
 
-    // --- Reset Logic ---
-    elements.resetBtn.addEventListener('click', () => {
-        if (confirm('모든 분석 자료를 지우고 처음부터 다시 시작하시겠습니까?')) {
-            processedHands = { left: null, right: null };
-            clearCanvas(elements.canvasLeft);
-            clearCanvas(elements.canvasRight);
-            elements.previewLeft.textContent = "대기 중...";
-            elements.previewRight.textContent = "대기 중...";
-            elements.resultDiv.innerHTML = "";
-            elements.palmImages.value = "";
-            updateAnalysisUI();
-        }
-    });
+    // --- Reset Logic (Manual Reset to Initial State) ---
+    if (elements.resetBtn) {
+        elements.resetBtn.addEventListener('click', () => {
+            if (confirm('모든 분석 자료를 지우고 처음부터 다시 시작하시겠습니까?')) {
+                // 1. Reset Data
+                processedHands = { left: null, right: null };
+                window._pendingImg = null;
+                window._targetHand = null;
+                
+                // 2. Clear UI: Canvases & Show Placeholders
+                clearCanvas(elements.canvasLeft);
+                clearCanvas(elements.canvasRight);
+                elements.previewLeft.style.display = 'flex';
+                elements.previewRight.style.display = 'flex';
+                
+                // 3. Reset Inputs to Defaults
+                elements.palmImages.value = "";
+                elements.ageInput.value = "25";
+                const maleRadio = document.querySelector('input[name="gender"][value="male"]');
+                if (maleRadio) maleRadio.checked = true;
+                
+                // 4. Clear Results Section
+                elements.resultDiv.innerHTML = "";
+                
+                // 5. Update UI Button States
+                updateAnalysisUI();
+                
+                // 6. Scroll to Top
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        });
+    }
 
     // --- Camera Logic ---
-    elements.openCameraBtn.addEventListener('click', async () => {
+    const openCamera = async (targetHand = null) => {
         try {
-            stream = await navigator.mediaDevices.getUserMedia({ 
-                video: { facingMode: 'environment' } 
-            });
-            elements.video.srcObject = stream;
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+            }
+
+            const constraints = { 
+                video: { 
+                    facingMode: { ideal: 'environment' },
+                    width: { ideal: 1280 },
+                    height: { ideal: 720 }
+                } 
+            };
             
-            updateCaptureButtonText();
+            try {
+                stream = await navigator.mediaDevices.getUserMedia(constraints);
+            } catch (e) {
+                stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            }
+
+            elements.video.srcObject = stream;
+            elements.video.onloadedmetadata = () => {
+                elements.video.play().catch(err => console.error("Auto-play failed:", err));
+            };
+            
+            if (targetHand) {
+                window._targetHand = targetHand;
+                elements.captureBtn.textContent = targetHand === 'left' ? "📸 왼손 촬영" : "📸 오른손 촬영";
+            } else {
+                updateCaptureButtonText();
+            }
             elements.cameraModal.style.display = 'flex';
         } catch (err) {
-            alert('카메라에 접근할 수 없습니다. 권한을 확인해주세요.');
+            console.error("Camera access error:", err);
+            alert('카메라에 접근할 수 없습니다. 권한을 확인해주시거나 크롬/사파리 브라우저를 이용해주세요.');
         }
+    };
+
+    elements.openCameraBtn.addEventListener('click', () => openCamera());
+    
+    document.querySelectorAll('.canvas-wrapper').forEach(wrapper => {
+        wrapper.addEventListener('click', () => {
+            const box = wrapper.closest('.analysis-box');
+            const hand = box.id === 'boxLeft' ? 'left' : 'right';
+            openCamera(hand);
+        });
     });
 
     function updateCaptureButtonText() {
@@ -117,7 +170,7 @@ document.addEventListener('DOMContentLoaded', () => {
             window._targetHand = 'right';
         } else {
             elements.captureBtn.textContent = "📸 다시 촬영";
-            window._targetHand = null; // Re-detect if already full
+            window._targetHand = null;
         }
     }
 
@@ -147,8 +200,6 @@ document.addEventListener('DOMContentLoaded', () => {
         
         canvas.toBlob(async (blob) => {
             const file = new File([blob], `capture_${Date.now()}.png`, { type: 'image/png' });
-            
-            // The actual saving happens inside processImage -> hands.onResults
             await processImage(file);
             updateAnalysisUI();
             
@@ -177,7 +228,7 @@ document.addEventListener('DOMContentLoaded', () => {
         elements.analyzeBtn.disabled = true;
         elements.analyzeBtn.textContent = "AI 분석 중...";
         
-        window._targetHand = null; // Ensure auto-detection for file uploads
+        window._targetHand = null;
         for (const file of files) {
             await processImage(file);
         }
@@ -199,7 +250,7 @@ document.addEventListener('DOMContentLoaded', () => {
         elements.analyzeBtn.disabled = true;
         elements.analyzeBtn.textContent = "AI 분석 중...";
         
-        window._targetHand = null; // Ensure auto-detection for file uploads
+        window._targetHand = null;
         for (const file of files) {
             await processImage(file);
         }
@@ -217,7 +268,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     window._pendingImg = img;
                     window._processResolver = resolve;
                     try {
-                        await hands.send({ image: img });
+                        if (hands) {
+                            await hands.send({ image: img });
+                        } else {
+                            processedHands[window._targetHand || 'left'] = { img, landmarks: null };
+                            resolve();
+                        }
                     } catch (error) {
                         console.error("Hands.send failed:", error);
                         resolve();
@@ -232,11 +288,16 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateAnalysisUI() {
         if (processedHands.left) {
             drawHandSkeletonAndLines(elements.canvasLeft, processedHands.left);
-            elements.previewLeft.textContent = "";
+            elements.previewLeft.style.display = 'none';
+        } else {
+            elements.previewLeft.style.display = 'flex';
         }
+        
         if (processedHands.right) {
             drawHandSkeletonAndLines(elements.canvasRight, processedHands.right);
-            elements.previewRight.textContent = "";
+            elements.previewRight.style.display = 'none';
+        } else {
+            elements.previewRight.style.display = 'flex';
         }
 
         const count = Object.values(processedHands).filter(v => v).length;
@@ -245,7 +306,11 @@ document.addEventListener('DOMContentLoaded', () => {
             elements.analyzeBtn.textContent = "Palm Reader 분석 결과 보기";
         } else {
             elements.analyzeBtn.disabled = true;
-            elements.analyzeBtn.textContent = "양손 사진이 필요합니다 (인식된 손: " + count + ")";
+            if (count === 0) {
+                elements.analyzeBtn.textContent = "분석을 위해 사진을 올려주세요";
+            } else {
+                elements.analyzeBtn.textContent = "양손 사진이 필요합니다 (인식된 손: " + count + ")";
+            }
         }
     }
 
@@ -263,16 +328,16 @@ document.addEventListener('DOMContentLoaded', () => {
         canvas.height = img.height;
         ctx.drawImage(img, 0, 0);
 
-        // Safely access MediaPipe Drawing Utils
         const mpDrawing = window;
         const mpHands = window;
 
-        if (mpDrawing.drawConnectors && mpDrawing.drawLandmarks && mpHands.HAND_CONNECTIONS) {
+        if (landmarks && mpDrawing.drawConnectors && mpDrawing.drawLandmarks && mpHands.HAND_CONNECTIONS) {
             mpDrawing.drawConnectors(ctx, landmarks, mpHands.HAND_CONNECTIONS, {color: '#ffffff', lineWidth: 2});
             mpDrawing.drawLandmarks(ctx, landmarks, {color: '#ffffff', lineWidth: 1, radius: 3});
         }
 
         const drawPalmLine = (points, color, label) => {
+            if (!points || points.length < 2) return;
             ctx.beginPath();
             ctx.strokeStyle = color;
             ctx.lineWidth = 8;

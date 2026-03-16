@@ -98,7 +98,7 @@
             <div class="modal-content">
                 <span class="close-modal">&times;</span>
                 <div class="camera-container">
-                    <video id="video" autoplay playsinline></video>
+                    <video id="video" autoplay playsinline muted></video>
                     <div class="camera-overlay"></div>
                     <button id="captureBtn" class="capture-btn">📸 찰칵!</button>
                 </div>
@@ -108,17 +108,27 @@
 
         <div class="analysis-container">
             <div class="analysis-box" id="boxLeft">
-                <div class="box-header">✋ 왼손 (선천운)</div>
+                <div class="box-header">
+                    <span>✋ 왼손 (선천운)</span>
+                </div>
                 <div class="canvas-wrapper">
                     <canvas id="canvasLeft"></canvas>
-                    <div id="previewLeft" class="preview-placeholder">대기 중...</div>
+                    <div id="previewLeft" class="preview-placeholder">
+                        <img src="camera.png" alt="카메라" class="camera-icon-img">
+                        <span>왼손 사진 촬영 또는 업로드</span>
+                    </div>
                 </div>
             </div>
             <div class="analysis-box" id="boxRight">
-                <div class="box-header">✋ 오른손 (후천운)</div>
+                <div class="box-header">
+                    <span>✋ 오른손 (후천운)</span>
+                </div>
                 <div class="canvas-wrapper">
                     <canvas id="canvasRight"></canvas>
-                    <div id="previewRight" class="preview-placeholder">대기 중...</div>
+                    <div id="previewRight" class="preview-placeholder">
+                        <img src="camera.png" alt="카메라" class="camera-icon-img">
+                        <span>오른손 사진 촬영 또는 업로드</span>
+                    </div>
                 </div>
             </div>
         </div>
