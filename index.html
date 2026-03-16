@@ -75,22 +75,6 @@
                     </div>
                 </div>
             </section>
-
-            <div class="unified-upload-section" id="dropZone">
-                <div class="upload-btn-group">
-                    <label for="palmImages" class="custom-file-upload">
-                        📁 파일 올리기
-                    </label>
-                    <button id="openCameraBtn" class="camera-btn">
-                        📸 카메라로 찍기
-                    </button>
-                </div>
-                <button id="resetBtn" class="reset-btn">
-                    🔄 새로 고침 (모든 자료 지우기)
-                </button>
-                <input type="file" id="palmImages" accept="image/*" multiple>
-                <p class="upload-hint">사진을 드래그하여 놓거나 버튼을 클릭하세요. (최대 2장)</p>
-            </div>
         </div>
 
         <!-- Camera Modal -->
@@ -111,36 +95,43 @@
                 <div class="box-header">
                     <span>✋ 왼손 (선천운)</span>
                 </div>
-                <div class="canvas-wrapper">
+                <div class="canvas-wrapper" data-hand="left">
                     <canvas id="canvasLeft"></canvas>
                     <div id="previewLeft" class="preview-placeholder">
                         <svg class="camera-icon" xmlns="http://www.w3.org/2000/svg" width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/>
                             <circle cx="12" cy="13" r="3"/>
                         </svg>
-                        <span>왼손 사진 촬영 또는 업로드</span>
+                        <span>왼손 사진 촬영/업로드</span>
                     </div>
+                    <input type="file" class="hidden-file-input" accept="image/*">
                 </div>
             </div>
             <div class="analysis-box" id="boxRight">
                 <div class="box-header">
                     <span>✋ 오른손 (후천운)</span>
                 </div>
-                <div class="canvas-wrapper">
+                <div class="canvas-wrapper" data-hand="right">
                     <canvas id="canvasRight"></canvas>
                     <div id="previewRight" class="preview-placeholder">
                         <svg class="camera-icon" xmlns="http://www.w3.org/2000/svg" width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/>
                             <circle cx="12" cy="13" r="3"/>
                         </svg>
-                        <span>오른손 사진 촬영 또는 업로드</span>
+                        <span>오른손 사진 촬영/업로드</span>
                     </div>
+                    <input type="file" class="hidden-file-input" accept="image/*">
                 </div>
             </div>
         </div>
 
         <div class="action-section">
-            <button id="analyzeBtn" class="primary-btn" disabled>분석을 위해 사진을 올려주세요</button>
+            <button id="analyzeBtn" class="primary-btn" disabled>양손 사진을 모두 올려주세요</button>
+            <div class="secondary-actions">
+                <button id="resetBtn" class="reset-btn-v2">
+                    🔄 모든 자료 지우고 다시 시작
+                </button>
+            </div>
         </div>
 
         <div id="result" class="result-section"></div>

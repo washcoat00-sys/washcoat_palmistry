@@ -5,13 +5,10 @@ document.addEventListener('DOMContentLoaded', () => {
         analyzeBtn: document.getElementById('analyzeBtn'),
         resultDiv: document.getElementById('result'),
         ageInput: document.getElementById('age'),
-        palmImages: document.getElementById('palmImages'),
-        dropZone: document.getElementById('dropZone'),
         canvasLeft: document.getElementById('canvasLeft'),
         canvasRight: document.getElementById('canvasRight'),
         previewLeft: document.getElementById('previewLeft'),
         previewRight: document.getElementById('previewRight'),
-        openCameraBtn: document.getElementById('openCameraBtn'),
         resetBtn: document.getElementById('resetBtn'),
         cameraModal: document.getElementById('cameraModal'),
         closeModal: document.querySelector('.close-modal'),
@@ -79,40 +76,31 @@ document.addEventListener('DOMContentLoaded', () => {
         elements.themeToggle.textContent = theme === 'dark' ? '☀️' : '🌙';
     });
 
-    // --- Reset Logic (Manual Reset to Initial State) ---
+    // --- Reset Logic ---
     if (elements.resetBtn) {
         elements.resetBtn.addEventListener('click', () => {
             if (confirm('모든 분석 자료를 지우고 처음부터 다시 시작하시겠습니까?')) {
-                // 1. Reset Data
                 processedHands = { left: null, right: null };
                 window._pendingImg = null;
                 window._targetHand = null;
                 
-                // 2. Clear UI: Canvases & Show Placeholders
                 clearCanvas(elements.canvasLeft);
                 clearCanvas(elements.canvasRight);
                 elements.previewLeft.style.display = 'flex';
                 elements.previewRight.style.display = 'flex';
                 
-                // 3. Reset Inputs to Defaults
-                elements.palmImages.value = "";
                 elements.ageInput.value = "25";
                 const maleRadio = document.querySelector('input[name="gender"][value="male"]');
                 if (maleRadio) maleRadio.checked = true;
                 
-                // 4. Clear Results Section
                 elements.resultDiv.innerHTML = "";
-                
-                // 5. Update UI Button States
                 updateAnalysisUI();
-                
-                // 6. Scroll to Top
                 window.scrollTo({ top: 0, behavior: 'smooth' });
             }
         });
     }
 
-    // --- Camera Logic ---
+    // --- Camera & Upload Logic ---
     const openCamera = async (targetHand = null) => {
         try {
             if (stream) {
@@ -141,38 +129,45 @@ document.addEventListener('DOMContentLoaded', () => {
             if (targetHand) {
                 window._targetHand = targetHand;
                 elements.captureBtn.textContent = targetHand === 'left' ? "📸 왼손 촬영" : "📸 오른손 촬영";
-            } else {
-                updateCaptureButtonText();
             }
             elements.cameraModal.style.display = 'flex';
         } catch (err) {
             console.error("Camera access error:", err);
-            alert('카메라에 접근할 수 없습니다. 권한을 확인해주시거나 크롬/사파리 브라우저를 이용해주세요.');
+            alert('카메라에 접근할 수 없습니다. 권한을 확인해주시거나 파일을 업로드해주세요.');
         }
     };
 
-    elements.openCameraBtn.addEventListener('click', () => openCamera());
-    
+    // 사진 박스 클릭 처리
     document.querySelectorAll('.canvas-wrapper').forEach(wrapper => {
-        wrapper.addEventListener('click', () => {
-            const box = wrapper.closest('.analysis-box');
-            const hand = box.id === 'boxLeft' ? 'left' : 'right';
-            openCamera(hand);
+        wrapper.addEventListener('click', (e) => {
+            // 이미지가 이미 처리된 경우 재촬영/재업로드 여부 확인
+            const hand = wrapper.dataset.hand;
+            
+            const choice = confirm(`${hand === 'left' ? '왼손' : '오른손'} 사진을 추가하시겠습니까?\n\n[확인] 카메라 촬영 / [취소] 파일 업로드`);
+            
+            if (choice) {
+                openCamera(hand);
+            } else {
+                const input = wrapper.querySelector('.hidden-file-input');
+                input.click();
+            }
+        });
+
+        // 파일 입력 변경 처리
+        const fileInput = wrapper.querySelector('.hidden-file-input');
+        fileInput.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            elements.analyzeBtn.disabled = true;
+            elements.analyzeBtn.textContent = "AI 분석 중...";
+            
+            window._targetHand = wrapper.dataset.hand;
+            await processImage(file);
+            updateAnalysisUI();
+            fileInput.value = ""; // 초기화
         });
     });
-
-    function updateCaptureButtonText() {
-        if (!processedHands.left) {
-            elements.captureBtn.textContent = "📸 왼손";
-            window._targetHand = 'left';
-        } else if (!processedHands.right) {
-            elements.captureBtn.textContent = "📸 오른손";
-            window._targetHand = 'right';
-        } else {
-            elements.captureBtn.textContent = "📸 다시 촬영";
-            window._targetHand = null;
-        }
-    }
 
     const stopCamera = () => {
         if (stream) {
@@ -203,58 +198,12 @@ document.addEventListener('DOMContentLoaded', () => {
             await processImage(file);
             updateAnalysisUI();
             
-            const bothDone = processedHands.left && processedHands.right;
-            if (bothDone) {
-                elements.captureBtn.textContent = "✅ 촬영 완료!";
-                setTimeout(() => {
-                    elements.captureBtn.disabled = false;
-                    stopCamera();
-                }, 1000);
-            } else {
-                elements.captureBtn.textContent = "✅ 저장됨";
-                setTimeout(() => {
-                    elements.captureBtn.disabled = false;
-                    updateCaptureButtonText();
-                }, 1000);
-            }
+            elements.captureBtn.textContent = "✅ 저장 완료!";
+            setTimeout(() => {
+                elements.captureBtn.disabled = false;
+                stopCamera();
+            }, 1000);
         }, 'image/png');
-    });
-
-    // --- File Handling & Processing ---
-    elements.palmImages.addEventListener('change', async (e) => {
-        const files = Array.from(e.target.files);
-        if (files.length === 0) return;
-        
-        elements.analyzeBtn.disabled = true;
-        elements.analyzeBtn.textContent = "AI 분석 중...";
-        
-        window._targetHand = null;
-        for (const file of files) {
-            await processImage(file);
-        }
-        updateAnalysisUI();
-        elements.palmImages.value = "";
-    });
-
-    elements.dropZone.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        elements.dropZone.classList.add('drag-over');
-    });
-    elements.dropZone.addEventListener('dragleave', () => elements.dropZone.classList.remove('drag-over'));
-    elements.dropZone.addEventListener('drop', async (e) => {
-        e.preventDefault();
-        elements.dropZone.classList.remove('drag-over');
-        const files = Array.from(e.dataTransfer.files);
-        if (files.length === 0) return;
-
-        elements.analyzeBtn.disabled = true;
-        elements.analyzeBtn.textContent = "AI 분석 중...";
-        
-        window._targetHand = null;
-        for (const file of files) {
-            await processImage(file);
-        }
-        updateAnalysisUI();
     });
 
     async function processImage(file) {
@@ -306,11 +255,7 @@ document.addEventListener('DOMContentLoaded', () => {
             elements.analyzeBtn.textContent = "Palm Reader 분석 결과 보기";
         } else {
             elements.analyzeBtn.disabled = true;
-            if (count === 0) {
-                elements.analyzeBtn.textContent = "분석을 위해 사진을 올려주세요";
-            } else {
-                elements.analyzeBtn.textContent = "양손 사진이 필요합니다 (인식된 손: " + count + ")";
-            }
+            elements.analyzeBtn.textContent = "양손 사진을 모두 올려주세요";
         }
     }
 
@@ -393,7 +338,7 @@ document.addEventListener('DOMContentLoaded', () => {
             sec: [
                 "꾸준한 자기 관리와 건강한 생활 습관으로 활력이 더욱 강화되고 있습니다. 생명선이 길어서 아주 건강한 흐름을 보이고 계시네요.",
                 "현재 에너지가 매우 조화로운 상태이며, 삶에 대한 의지가 매우 높습니다. 이 흐름을 유지하시면 신체적 안정감이 최고조에 달할 것입니다.",
-                "규칙적인 루틴을 통해 다져진 내공이 생명선에 잘 나타나 있습니다. 본인의 리듬을 믿고 나아가시면 장수와 복을 동시에 누리실 겁니다.",
+                "규칙적인 루틴을 통해 다져진 내공이 생명선에 잘 나타나 있습니다. 본인의 리듬을 믿고 나아가하시면 장수와 복을 동시에 누리실 겁니다.",
                 "생명선의 색택이 좋아 현재 컨디션이 최상임을 나타냅니다. 무리하지 않고 지금처럼만 관리하신다면 무병장수할 기운이 가득합니다.",
                 "섬세한 감각과 높은 환경 적응력을 바탕으로 한 생명력을 지녔습니다. 가끔은 자신을 위한 보상의 시간을 갖는 것이 운을 더 높여줄 것입니다."
             ]
@@ -442,7 +387,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 "운명선의 흐름이 독창적이라 자신만의 길을 개척하는 힘이 강하시네요. 추진력이 너무 좋아서 가끔은 속도 조절이 필요할 정도니 천천히 주변을 살피며 나아가보세요.",
                 "운명선과 지능선의 만남이 절묘하여 사업적 수완이 엿보입니다. 현재 계획하고 계신 일을 차분히 실행하시면 경제적 자유를 얻으실 가능성이 매우 높습니다.",
                 "뚜렷한 목표 의식과 개척 정신으로 성공을 향한 의지가 강합니다. 운명선이 굵게 솟아 있어 스스로의 힘으로 운명을 바꾸고 계시네요.",
-                "안정적인 환경에서 자신의 재능을 꾸준히 발휘하며 성장할 운을 지녔습니다. 지금의 평온함을 소중히 여기시면 더 큰 행운이 찾아올 것입니다."
+                "안정적인 환경에서 자신의 재능을 꾸준히 발휘하며 성장할 운을 지녔습니다. 지금의 평온함을 소중히 여기하시면 더 큰 행운이 찾아올 것입니다."
             ],
             sec: [
                 "성실함과 노력이 겹쳐져 사회적 신뢰와 명망이 두터워지고 있는 시기입니다. 운명선이 뚜렷하여 하시는 일마다 결실을 맺겠습니다.",

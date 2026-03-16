@@ -203,70 +203,38 @@ main {
     font-size: 0.9rem;
 }
 
-.unified-upload-section {
-    background: var(--card-bg);
-    padding: 2.5rem 1.5rem;
-    border-radius: 20px;
-    text-align: center;
-    box-shadow: var(--shadow);
-    margin-bottom: 2rem;
-    border: 2px dashed var(--accent-color);
+.hidden-file-input {
+    display: none;
 }
 
-.upload-btn-group {
-    display: flex;
-    gap: 0.8rem;
-    justify-content: center;
-    flex-wrap: wrap;
+.secondary-actions {
+    margin-top: 1.5rem;
 }
 
-.custom-file-upload, .camera-btn {
-    padding: 0.8rem 1.5rem;
+.reset-btn-v2 {
+    background: transparent;
+    color: var(--text-color);
+    border: 1px solid rgba(0,0,0,0.1);
+    padding: 0.6rem 1.2rem;
     border-radius: 10px;
-    font-weight: bold;
-    cursor: pointer;
-    font-size: 0.95rem;
-    transition: all 0.2s;
-    border: none;
-    display: inline-block;
-}
-
-.custom-file-upload {
-    background: var(--accent-color);
-    color: white;
-}
-
-.camera-btn {
-    background: #2c3e50;
-    color: white;
-}
-
-.reset-btn {
-    margin-top: 1rem;
-    padding: 0.5rem 1rem;
-    background: #e74c3c;
-    color: white;
-    border-radius: 8px;
-    border: none;
-    font-weight: bold;
-    cursor: pointer;
     font-size: 0.85rem;
+    cursor: pointer;
     transition: all 0.2s;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
+    opacity: 0.6;
 }
 
-.reset-btn:hover {
-    background: #c0392b;
-    transform: translateY(-1px);
+.reset-btn-v2:hover {
+    opacity: 1;
+    background: rgba(0,0,0,0.05);
 }
 
-.custom-file-upload:hover { background: var(--accent-hover); }
-.camera-btn:hover { background: #34495e; }
+body.dark-mode .reset-btn-v2 {
+    border-color: rgba(255,255,255,0.1);
+}
 
-.unified-upload-section input[type="file"] { display: none; }
-.upload-hint { font-size: 0.75rem; margin-top: 1rem; opacity: 0.6; }
+body.dark-mode .reset-btn-v2:hover {
+    background: rgba(255,255,255,0.05);
+}
 
 /* Analysis Container Size Control */
 .analysis-container {
@@ -363,8 +331,6 @@ canvas {
 .primary-btn:hover { background: var(--accent-hover); transform: translateY(-3px); box-shadow: 0 15px 25px rgba(74, 144, 226, 0.3); }
 .primary-btn:active { transform: scale(0.98); }
 .primary-btn:disabled { opacity: 0.5; cursor: not-allowed; background: #999; box-shadow: none; }
-
-.unified-upload-section.drag-over { background: rgba(74, 144, 226, 0.05); }
 
 /* Info Sections (For SEO & AdSense) */
 .info-section, .faq-section {
